@@ -123,3 +123,33 @@ tr.muted { opacity: .55; }
 .zero { background: #fff6e6; border: 1px solid var(--brass-light); padding: .7rem 1rem; border-radius: .3rem; font-family: var(--sans); font-size: 1rem; }
 .ideas ul { padding-left: 1.2rem; margin: .5rem 0; }
 .ideas li { margin: .25rem 0; }
+
+/* The Case */
+.also { font-family: var(--sans); font-size: 1rem; border-top: 1px solid var(--rule); padding-top: .8rem; }
+.enquiry { margin: 1.5rem 0; padding: 1.1rem 1.25rem .6rem; background: #f6f1e4; border: 1px solid var(--rule); border-top: 4px solid var(--green); border-radius: .25rem; }
+.enquiry h2 { border: 0; padding-top: 0; margin-top: .3rem; font-size: 1.5rem; }
+.theory { font-style: italic; border-left: 3px solid var(--cranberry); padding-left: .8rem; }
+.theory span { font-style: normal; font-family: var(--sans); font-size: .85rem; font-weight: 600; display: block; color: var(--cranberry); }
+.theory-box { background: var(--green); color: var(--ivory); padding: 1rem 1.25rem; border-radius: .3rem; margin: 1rem 0 1.5rem; }
+.theory-box .kicker { color: var(--brass-light); }
+.theory-big { font-size: 1.4rem; margin: .3rem 0 0; font-style: italic; }
+.suspects { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .6rem; }
+.suspect { background: var(--paper); border: 1px solid var(--rule); border-radius: .3rem; padding: .7rem .8rem; }
+.suspect .small { margin: 0; font-size: .85rem; }
+.suspect h3 { margin: 0 0 .4rem; font-size: 1.1rem; }
+.stamp { display: inline-block; margin: 0 0 .4rem; padding: .15rem .5rem; border: 2px solid var(--cranberry); color: var(--cranberry); font: 700 .78rem/1.3 var(--sans); letter-spacing: .08em; text-transform: uppercase; border-radius: .2rem; }
+.stamp.cleared { border-color: var(--green-2); color: var(--green-2); }
+.stamp.gone { border-color: var(--muted); color: var(--muted); }
+.stamp.prime { background: var(--cranberry); color: #fff; }
+.evidence { list-style: none; padding: 0; display: grid; gap: .8rem; }
+.exhibit { background: #fffef9; border: 1px solid var(--rule); border-left: 5px solid var(--brass); padding: .7rem 1rem .4rem; border-radius: .25rem; }
+.exhibit.fresh { border-left-color: var(--cranberry); box-shadow: 0 0 0 2px #f1d7dc; }
+.exhibit p { margin: .3rem 0; }
+.ex-no { font: 700 .85rem var(--sans); color: var(--cranberry); text-transform: uppercase; letter-spacing: .06em; }
+.ex-no .small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.sio { font-family: "Bradley Hand", "Segoe Print", "Comic Neue", cursive, var(--serif); color: #b0283f; font-size: 1.05rem; }
+.sio::before { content: "SIO: "; font-weight: 700; }
+.diary { list-style: none; padding: 0; }
+.diary li { border-bottom: 1px dotted var(--rule); }
+.diary a { display: block; padding: .45rem 0; text-decoration: none; }
+.diary .num { display: inline-block; min-width: 2rem; font-weight: 700; color: var(--cranberry); }

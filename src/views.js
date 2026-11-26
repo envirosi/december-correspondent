@@ -40,6 +40,7 @@ function layout({ title, body, reader, now, csrf, banner }) {
       <a href="/">Front page</a>
       <a href="/pigeonhole" class="pigeonhole-link"><span class="handle" aria-hidden="true"></span>My pigeonhole</a>
       <a href="/pouch">Diplomatic Pouch</a>
+      <a href="/case">The Case</a>
       ${reader.role === 'editor' ? '<a href="/editor">Editor’s desk</a>' : ''}
     </nav>` : '';
   return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8">

@@ -30,6 +30,29 @@ async function seedDoors(edition, { overwrite = false } = {}) {
   return { inserted, updated, keptEdited: kept };
 }
 
+// The case is authored in data/*.csv and always replaced wholesale from there.
+async function seedCase(edition) {
+  const { tx } = require('./db');
+  const read = f => parseCsv(fs.readFileSync(path.join(__dirname, '..', 'data', f), 'utf8'));
+  const entries = read('case.csv'), clues = read('clues.csv'), suspects = read('suspects.csv');
+  const day = (r, f) => {
+    const d = parseInt(r.day, 10);
+    if (!(d >= 1 && d <= 24)) throw new Error(`${f} row ${r._row}: bad day`);
+    return d;
+  };
+  await tx(async c => {
+    await c.query('delete from case_entry where edition_id=$1', [edition.id]);
+    await c.query('delete from case_clue where edition_id=$1', [edition.id]);
+    await c.query('delete from case_suspect where edition_id=$1', [edition.id]);
+    for (const r of entries) await c.query('insert into case_entry(edition_id, day, title, body, theory) values ($1,$2,$3,$4,$5)', [edition.id, day(r, 'case.csv'), r.title, r.body, r.theory || null]);
+    let i = 0;
+    for (const r of clues) await c.query('insert into case_clue(edition_id, day, seq, clue, note) values ($1,$2,$3,$4,$5)', [edition.id, day(r, 'clues.csv'), ++i, r.clue, r.note || null]);
+    i = 0;
+    for (const r of suspects) await c.query('insert into case_suspect(edition_id, day, seq, suspect, status, note) values ($1,$2,$3,$4,$5,$6)', [edition.id, day(r, 'suspects.csv'), ++i, r.suspect, r.status, r.note || null]);
+  });
+  return { entries: entries.length, clues: clues.length, suspects: suspects.length };
+}
+
 async function upsertReader(edition, { name, email, zone, role = 'reader' }) {
   const r = await q(`insert into reader(edition_id, public_id, name, email, zone, role)
       values ($1,$2,$3,lower($4),$5,$6)
@@ -41,6 +64,7 @@ async function upsertReader(edition, { name, email, zone, role = 'reader' }) {
 async function seed({ overwrite = false } = {}) {
   const edition = await ensureEdition();
   const doors = await seedDoors(edition, { overwrite });
+  const caseFile = await seedCase(edition);
   if (process.env.EDITOR_EMAIL) {
     const zone = T.zoneFrom(process.env.EDITOR_ZONE || 'UK');
     const editor = await upsertReader(edition, { name: process.env.EDITOR_NAME || 'Si', email: process.env.EDITOR_EMAIL, zone, role: 'editor' });
@@ -53,7 +77,7 @@ async function seed({ overwrite = false } = {}) {
         [editor.id, digest(boot)]);
     }
   }
-  return { edition, doors };
+  return { edition, doors, caseFile };
 }
 
-module.exports = { seed, ensureEdition, seedDoors, upsertReader };
+module.exports = { seed, ensureEdition, seedDoors, seedCase, upsertReader };

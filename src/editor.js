@@ -196,6 +196,7 @@ function mount(app) {
       res.page(`Preview door ${day}`, `<p class="small">Desk: ${zones} · Opens ${esc(T.fmtFull(opens, zone))} ${esc(T.zoneLabel(zone))} time ·
           ${day > 1 ? `<a href="/editor/preview?day=${day - 1}&zone=${encodeURIComponent(T.zoneLabel(zone))}">← ${day - 1}</a>` : ''} ${day < 24 ? `<a href="/editor/preview?day=${day + 1}&zone=${encodeURIComponent(T.zoneLabel(zone))}">${day + 1} →</a>` : ''} · <a href="/editor/doors/${day}">Edit</a></p>
         <article class="story"><p class="kicker">Front page · door ${day}</p><h1>${esc(d.shared_title)}</h1>${paras(d.shared_body)}</article>
+        ${await require('./casefile').enquirySection(req.edition.id, day)}
         ${d.optional_prompt ? `<aside class="prompt"><p>${esc(d.optional_prompt)}</p></aside>` : '<p class="small">Reading only today.</p>'}
         <article class="story private"><p class="kicker">Pigeonhole · door ${day}</p><h1>${esc(d.private_title)}</h1>${paras(d.private_body)}</article>`,
       { banner: 'Editor preview · this is not what readers can see yet' });

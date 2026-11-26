@@ -5,6 +5,7 @@ const T = require('./time');
 const V = require('./views');
 const A = require('./auth');
 const { esc, paras, hidden, layout, doorGrid, mediaLink, safeHttpsUrl } = V;
+const CASE = require('./casefile');
 
 const RELAY_DAYS = new Set([3, 17, 21]);
 const LETTER_DAY = 14;
@@ -151,11 +152,13 @@ function createApp() {
       }
       const door = await getDoor(ed, n);
       const titles = await titlesUpTo(ed, n, 'shared_title');
+      const caseLine = await CASE.headline(ed.id, n);
       const complete = n === 24 && T.releasedDay(new Date(req.now.getTime() - 86400000), zone) === 24;
       res.page(null, `<section class="lead">
         <p class="kicker">${complete ? 'The complete edition' : `Door ${n} · ${esc(T.fmtDay(n))}`}</p>
         <h1>${esc(door.shared_title)}</h1>
         <p class="actions"><a class="btn primary" href="/door/${n}">Open today’s door</a> <a class="btn" href="/pigeonhole/${n}">My pigeonhole</a></p>
+        ${caseLine ? `<p class="also">Also in today’s paper: <a href="/door/${n}#enquiry">The Case of the Communal Tin, day ${n}: ${esc(caseLine)}</a></p>` : ''}
       </section>
       <section><h2>${complete ? 'Every edition' : 'Past editions'}</h2>
       ${doorGrid({ released: n, today: complete ? 0 : n, titles, hrefFor: d => `/door/${d}`, label: 'Front-page doors' })}</section>`);
@@ -214,6 +217,7 @@ function createApp() {
       res.page(door.shared_title, `${flash}<article class="story">
         <p class="kicker">Door ${day} · ${esc(T.fmtDay(day))}</p>
         <h1>${esc(door.shared_title)}</h1>${paras(door.shared_body)}</article>
+        ${await CASE.enquirySection(ed.id, day)}
         ${prompt}${list}
         <nav class="pager" aria-label="Other doors">${day > 1 ? `<a href="/door/${day - 1}">← Door ${day - 1}</a>` : '<span></span>'}
         <a href="/pigeonhole/${day}">Your pigeonhole for today</a>
@@ -323,6 +327,7 @@ function createApp() {
   });
 
   require('./pouch').mount(app);
+  CASE.mount(app);
   require('./editor').mount(app);
 
   app.use((req, res) => res.status(404).page('Not found', '<article class="story narrow"><h1>Nothing here</h1><p>Perhaps it was the reindeer.</p></article>'));

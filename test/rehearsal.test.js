@@ -260,6 +260,23 @@ test('letters with [placeholders] are refused', async () => {
   assert.match((await req('/editor/letters', { who: P.ed })).text, /Start from an idea[\s\S]*Overnight elves/);
 });
 
+test('the case unfolds day by day and never leaks ahead', async () => {
+  const day3 = '2026-12-03T12:00:00Z';
+  const board = (await req('/case', { who: P.ada, at: day3 })).text;
+  assert.match(board, /The Case of the Communal Tin/);
+  assert.match(board, /oddly well framed/);           // day 3 clue
+  assert.doesNotMatch(board, /fingertip search|shortbread finger|Lift the laptop|It was me/);
+  assert.match(board, /The reindeer[\s\S]*Under suspicion/);
+  const door = (await req('/door/3', { who: P.ada, at: day3 })).text;
+  assert.match(door, /id="enquiry"[\s\S]*The reindeer is questioned/);
+  assert.match((await req('/', { who: P.ada, at: day3 })).text, /Also in today’s paper/);
+  assert.match((await req('/case', { who: P.ada, at: '2026-11-29T12:00:00Z' })).text, /Nothing has gone missing/);
+  const end = (await req('/case', { who: P.ada, at: '2026-12-24T12:00:00Z' })).text;
+  assert.match(end, /Case closed[\s\S]*It was me/);
+  assert.match(end, /Identified: the editor/);
+  assert.equal((end.match(/class="exhibit/g) || []).length, 25);
+});
+
 test('personal pages are never cached', async () => {
   const r = await req('/pigeonhole', { who: P.ada });
   assert.match(r.headers.get('cache-control'), /no-store/);
