@@ -120,3 +120,6 @@ tr.muted { opacity: .55; }
   .story { padding: 1rem .9rem .3rem; }
   .actions .btn { flex: 1 1 100%; text-align: center; }
 }
+.zero { background: #fff6e6; border: 1px solid var(--brass-light); padding: .7rem 1rem; border-radius: .3rem; font-family: var(--sans); font-size: 1rem; }
+.ideas ul { padding-left: 1.2rem; margin: .5rem 0; }
+.ideas li { margin: .25rem 0; }

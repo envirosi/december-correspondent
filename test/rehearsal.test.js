@@ -163,7 +163,7 @@ test('draw: 0, 1, 2 and 5 entrants, concurrent presses, no self-match', async ()
 
 test('pouch end to end: gift day, late gift, privacy, skipper keeps calendar', async () => {
   const enrolAt = '2026-12-03T12:00:00Z';
-  for (const p of [P.ada, P.cal, P.ed]) await post(p, '/pouch/join', { like: `tea-${p.id}`, laugh: 'puns' }, enrolAt);
+  for (const p of [P.ada, P.cal, P.ed]) await post(p, '/pouch/join', {}, enrolAt);
   await post(P.ed, '/editor/pouch/draw', {}, '2026-12-08T09:00:00Z');
   const again = await post(P.ed, '/editor/pouch/draw', {}, '2026-12-08T09:01:00Z');
   assert.match(again.headers.get('location'), /already/);
@@ -191,9 +191,11 @@ test('pouch end to end: gift day, late gift, privacy, skipper keeps calendar', a
   // Bea skipped: calendar intact, polite pouch page.
   assert.equal((await req('/pigeonhole/18', { who: P.bea, at: '2026-12-20T12:00:00Z' })).status, 200);
   assert.match((await req('/pouch', { who: P.bea, at: '2026-12-20T12:00:00Z' })).text, /not in the draw/);
-  // Giver sees recipient's wishes, nobody else's.
+  // Giver sees their recipient, gift ideas and the zero budget; no wish list.
   const mine = (await req('/pouch', { who: late, at: '2026-12-09T12:00:00Z' })).text;
-  assert.match(mine, new RegExp(`tea-${lateTo.id}`));
+  assert.match(mine, /spending limit is zero/);
+  assert.match(mine, /Need an idea\?/);
+  assert.doesNotMatch(mine, /wish slip/i);
 });
 
 test('withdrawal after draw flags a reserve without redrawing', async () => {

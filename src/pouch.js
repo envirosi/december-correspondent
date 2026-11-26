@@ -3,7 +3,20 @@ const { q, tx } = require('./db');
 const T = require('./time');
 const { esc, paras, hidden, mediaLink, safeHttpsUrl } = require('./views');
 
-const clip = (s, n) => String(s || '').trim().slice(0, n) || null;
+const ZERO = `<p class="zero"><strong>The spending limit is zero.</strong> Every parcel is virtual and free: a few words, plus a link if you like. Please don’t buy anything, send vouchers or ask anyone for money.</p>`;
+const IDEAS = [
+  'A song that makes you think of them, and one line on why',
+  'A GIF that sums up their year (or yours)',
+  'A short video that made you laugh out loud',
+  'A photo you took this year: a view, a tree, a ridiculous cloud',
+  'A recipe from your corner of the world, written out or photographed',
+  'A free recommendation: a podcast episode, a walk, a library book',
+  'A handwritten note, photographed',
+  'The imaginary present you’d give them with an unlimited budget, described in detail',
+  'A very specific compliment about something they did this year',
+];
+const ideasHtml = `<details class="ideas" open><summary>Need an idea?</summary><ul>${IDEAS.map(i => `<li>${i}</li>`).join('')}</ul>
+  <p class="small">Text on its own is a complete parcel. Keep it something you’d be happy for anyone in the team to see.</p></details>`;
 
 // Secure ring draw. Idempotent: a repeat press returns the existing draw.
 async function runDraw(editionId, now) {
@@ -45,41 +58,38 @@ function mount(app) {
       const closeLocal = T.fmtFull(ed.enrol_close, me.zone);
       const open = now < ed.enrol_close;
       let body = `<section class="lead"><p class="kicker">Voluntary Secret Santa</p><h1>The Diplomatic Pouch</h1>
-        <p class="standfirst">Fancy sending one person a virtual present? A song and a sentence explaining why you picked it make a complete parcel. The spending limit is zero.</p></section>`;
+        <p class="standfirst">Fancy sending one person a virtual present? A song and a sentence explaining why you picked it make a complete parcel.</p>${ZERO}</section>`;
 
       if (!ed.drawn_at) {
         if (active) {
-          body += `<section class="card"><h2>You’re in</h2><p>Names are drawn after enrolment closes on ${esc(closeLocal)}, your time. You can change your wish slip or step out until then.</p>
-            ${wishForm(req, enr, 'Update my wish slip')}
+          body += `<section class="card"><h2>You’re in</h2><p>Names are drawn after enrolment closes on ${esc(closeLocal)}, your time. You can step out until then.</p>
             <form method="post" action="/pouch/withdraw">${hidden(req.csrf)}<button class="btn">Step out of the draw</button></form></section>`;
         } else if (open) {
-          body += `<section class="card"><h2>Join the Diplomatic Pouch</h2><p>Enrol by ${esc(closeLocal)}, your time. You can change your mind until names are drawn.</p>${wishForm(req, null, 'Join the Diplomatic Pouch')}</section>`;
+          body += `<section class="card"><h2>Join the Diplomatic Pouch</h2><p>Enrol by ${esc(closeLocal)}, your time. You can change your mind until names are drawn.</p>
+            <form method="post" action="/pouch/join">${hidden(req.csrf)}<button class="btn primary">Join the Diplomatic Pouch</button></form></section>`;
         } else {
           body += `<section class="card"><p>Enrolment has closed. Your calendars are all yours, and nobody is keeping count.</p></section>`;
         }
         return res.page('Diplomatic Pouch', body);
       }
 
-      const a = (await q(`select a.*, r.name rname, r.zone rzone, e.wish_like, e.wish_laugh, e.wish_discover
+      const a = (await q(`select a.*, r.name rname, r.zone rzone
           from assignment a join reader r on r.id=a.recipient_id
-          left join enrolment e on e.edition_id=a.edition_id and e.reader_id=a.recipient_id
           where a.edition_id=$1 and a.giver_id=$2`, [ed.id, me.id])).rows[0];
       if (!a || !active) {
         body += `<section class="card"><p>${a ? 'You’ve stepped out of sending this year, and that’s fine. The editor has it covered.' : 'You’re not in the draw this year. Your calendars are all yours, and nobody is keeping count.'}</p></section>`;
         return res.page('Diplomatic Pouch', body);
       }
       const p = (await q('select * from parcel where assignment_id=$1', [a.id])).rows[0];
-      const wishes = [['Something I like', a.wish_like], ['Something that makes me laugh', a.wish_laugh], ['Something I’d enjoy discovering', a.wish_discover]]
-        .filter(w => w[1]).map(w => `<dt>${w[0]}</dt><dd>${esc(w[1])}</dd>`).join('');
       body += `<section class="card"><h2>You’re sending a little post to ${esc(a.rname)}</h2>
-        ${wishes ? `<h3>Their wish slip</h3><dl class="wishes">${wishes}</dl>` : '<p>They left the wish slip blank, so surprise them.</p>'}</section>`;
+        <p>They’re at our ${esc(T.zoneLabel(a.rzone))} desk. Keep it secret, keep it kind, keep it free.</p>${ideasHtml}</section>`;
       if (p.sealed_at) {
         body += `<section class="card sealed-card"><h2>Sealed</h2><p>Wax applied. Thumb briefly attached. Your parcel is ready.</p><p>${deliveryText(a.rzone, now)}</p>
           <div class="letter">${paras(p.body)}${mediaLink(p.url)}</div></section>`;
       } else {
         const preview = req.query.preview === '1' && p.body ? `<section class="card"><h2>Preview</h2><p class="small">This is how it will look to ${esc(a.rname)}.</p><div class="letter">${paras(p.body)}${mediaLink(p.url)}</div>
             <form method="post" action="/pouch/seal">${hidden(req.csrf)}<button class="btn primary">Seal it</button></form></section>` : '';
-        body += `${preview}<section class="card"><h2>Your parcel</h2><p>Aim to seal it by 17 December so it arrives on the 18th. Text on its own is a complete parcel.</p>
+        body += `${preview}<section class="card"><h2>Your parcel</h2><p>Aim to seal it by 17 December so it arrives on the 18th. No purchases, vouchers or paid downloads, please: just your words and, if you like, a link to something free to enjoy.</p>
           <form method="post" action="/pouch/parcel">${hidden(req.csrf)}
             <label for="pb">Your message</label><textarea id="pb" name="body" rows="6" maxlength="1500" required>${esc(p.body)}</textarea>
             <label for="pu">Link <span class="small">(optional: a song, GIF or photo, starting https://)</span></label>
@@ -92,15 +102,6 @@ function mount(app) {
     } catch (e) { next(e); }
   });
 
-  function wishForm(req, e, label) {
-    return `<form method="post" action="/pouch/join">${hidden(req.csrf)}
-      <p class="small">My wish slip. Fill in whichever you fancy.</p>
-      <label for="w1">Something I like</label><input id="w1" name="like" maxlength="200" value="${esc(e && e.wish_like || '')}">
-      <label for="w2">Something that makes me laugh</label><input id="w2" name="laugh" maxlength="200" value="${esc(e && e.wish_laugh || '')}">
-      <label for="w3">Something I’d enjoy discovering</label><input id="w3" name="discover" maxlength="200" value="${esc(e && e.wish_discover || '')}">
-      <button class="btn primary">${label}</button></form>`;
-  }
-
   app.post('/pouch/join', async (req, res, next) => {
     try {
       const ed = req.edition;
@@ -108,9 +109,8 @@ function mount(app) {
       const existing = (await q('select withdrawn_at from enrolment where edition_id=$1 and reader_id=$2', [ed.id, req.reader.id])).rows[0];
       const isActive = existing && !existing.withdrawn_at;
       if (!isActive && req.now >= ed.enrol_close) return res.redirect(303, '/pouch');
-      await q(`insert into enrolment(edition_id, reader_id, wish_like, wish_laugh, wish_discover) values ($1,$2,$3,$4,$5)
-        on conflict (edition_id, reader_id) do update set wish_like=excluded.wish_like, wish_laugh=excluded.wish_laugh, wish_discover=excluded.wish_discover, withdrawn_at=null`,
-        [ed.id, req.reader.id, clip(req.body.like, 200), clip(req.body.laugh, 200), clip(req.body.discover, 200)]);
+      await q(`insert into enrolment(edition_id, reader_id) values ($1,$2)
+        on conflict (edition_id, reader_id) do update set withdrawn_at=null`, [ed.id, req.reader.id]);
       res.redirect(303, '/pouch');
     } catch (e) { next(e); }
   });

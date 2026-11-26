@@ -24,9 +24,10 @@ Si — Junior Tree Correspondent at ETN
 I’m putting a little post behind one of [name]’s December doors. Can you think of a particular moment this year when they made something easier, kinder or funnier for you? One or two sentences in your own words would be lovely. Please say how you’d like to sign it. It goes privately to [name]. I’ll ask again if we ever want to print it.
 
 ## Pouch copy
-**Join the Diplomatic Pouch** · Fancy sending one person a virtual present? A song and a sentence explaining why you picked it make a complete parcel. Enrol by [local deadline]. You can change your mind until names are drawn.
-**My wish slip** · Something I like / Something that makes me laugh / Something I’d enjoy discovering. Fill in whichever you fancy.
-**After the draw** · You’re sending a little post to [name]. Here’s their wish slip. Aim to seal it by 17 December so it arrives on the 18th.
+**Join the Diplomatic Pouch** · Fancy sending one person a virtual present? A song and a sentence explaining why you picked it make a complete parcel. No wish lists, no shopping. Enrol by [local deadline]. You can change your mind until names are drawn.
+**The spending limit is zero** · Every parcel is virtual and free: a few words, plus a link if you like. Please don’t buy anything, send vouchers or ask anyone for money.
+**Need an idea?** · A song that makes you think of them · a GIF that sums up their year · a short video that made you laugh · a photo you took this year · a recipe from your corner of the world · a free recommendation · a handwritten note, photographed · the imaginary present you’d give with an unlimited budget · a very specific compliment.
+**After the draw** · You’re sending a little post to [name]. Keep it secret, keep it kind, keep it free. Aim to seal it by 17 December so it arrives on the 18th.
 **On sealing** · Wax applied. Thumb briefly attached. Your parcel is ready.
 **Reserve parcel, prepared by the editor** · A Christmas gift from the picture desk. Your imaginary memoir has been commissioned under the title “I Was Muted for the Interesting Bit”. The paperback will include a foreword by a man still trying to share his screen. With affection from the December desk.
 
