@@ -239,6 +239,27 @@ test('browser origin accepted, foreign origin rejected', async () => {
   assert.equal((await post('http://localhost', tokenOf(await A.issueInvite(r.id)))).status, 303);
 });
 
+test('editor preview mode opens doors for the editor only', async () => {
+  const at = '2026-11-26T14:00:00Z';
+  assert.equal((await req('/door/24', { who: P.ed, at })).status, 404);
+  const on = await post(P.ed, '/editor/preview-mode', { day: '24' }, at);
+  const pv = on.headers.get('set-cookie').match(/dc_preview=([^;]+)/)[1];
+  const withPv = who => ({ ...who, cookie: `${who.cookie}; dc_preview=${pv}` });
+  const r = await req('/door/24', { who: withPv(P.ed), at });
+  assert.equal(r.status, 200);
+  assert.match(r.text, /Tin recovered/);
+  assert.match(r.text, /Preview mode/);
+  assert.equal((await req('/door/24', { who: withPv(P.ada), at })).status, 404, 'readers cannot use the preview cookie');
+});
+
+test('letters with [placeholders] are refused', async () => {
+  const bad = await post(P.ed, '/editor/letters', { recipient: String(P.ada.id), day: '3', body: 'Thank you for [thing].', byline: 'Si' });
+  assert.equal(bad.status, 400);
+  const good = await post(P.ed, '/editor/letters', { recipient: String(P.ada.id), day: '3', body: 'Thank you for the Leeds survey.', byline: 'Si' });
+  assert.equal(good.status, 303);
+  assert.match((await req('/editor/letters', { who: P.ed })).text, /Start from an idea[\s\S]*Overnight elves/);
+});
+
 test('personal pages are never cached', async () => {
   const r = await req('/pigeonhole', { who: P.ada });
   assert.match(r.headers.get('cache-control'), /no-store/);

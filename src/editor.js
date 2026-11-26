@@ -6,6 +6,8 @@ const { upsertReader } = require('./seed');
 const { runDraw } = require('./pouch');
 const { esc, paras, hidden, mediaLink, safeHttpsUrl } = require('./views');
 
+const STARTERS = require('./starters');
+const PLACEHOLDER = /\[[^\]]*\]/;
 const RESERVE_COPY = 'A Christmas gift from the picture desk. Your imaginary memoir has been commissioned under the title “I Was Muted for the Interesting Bit”. The paperback will include a foreword by a man still trying to share his screen. With affection from the December desk.';
 const EMAIL_RE = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 
@@ -54,8 +56,25 @@ function mount(app) {
           <li><a href="/editor/letters#coverage"><strong>${cov.length}</strong> readers still need a letter</a></li>
           <li><a href="/editor/pouch"><strong>${enr.rows[0].n}</strong> in the Pouch${ed.drawn_at ? ' · drawn' : ''}</a></li>
         </ul>
+        <h2>Try it as a reader</h2>
+        <form method="post" action="/editor/preview-mode">${hidden(req.csrf)}
+          <label for="pvday">Show me the paper as it looks on door</label>
+          <input id="pvday" name="day" type="number" min="1" max="24" value="${req.previewDay || 24}" required>
+          <button class="btn primary">Start preview</button></form>
+        <p class="small">Only you see this. Door 24 opens everything. Leave preview from the banner at the top.</p>
         <p class="small">Nobody’s reading habits are recorded, so there’s nothing to see about who opened what.</p>`);
     } catch (e) { next(e); }
+  });
+
+  app.post('/editor/preview-mode', (req, res) => {
+    const d = Number(req.body.day);
+    if (!(Number.isInteger(d) && d >= 1 && d <= 24)) return res.redirect(303, '/editor');
+    res.cookie('dc_preview', String(d), { httpOnly: true, sameSite: 'lax', secure: A.publicOrigin().startsWith('https://'), path: '/' });
+    res.redirect(303, '/');
+  });
+  app.post('/editor/preview-mode/exit', (req, res) => {
+    res.clearCookie('dc_preview', { path: '/' });
+    res.redirect(303, '/editor');
   });
 
   // ---------- Readers ----------
@@ -202,11 +221,16 @@ function mount(app) {
         <section><h2>Add a letter</h2>
         <form method="post" action="/editor/letters">${hidden(req.csrf)}
           <label for="recipient">For</label>${sel(rs, 'recipient', null, 'required')}
+          <label for="starter">Start from an idea <span class="small">(optional)</span></label>
+          <select id="starter"><option value="">Write my own</option>${STARTERS.map((t, i) => `<option value="${i}">${esc(t.title)}</option>`).join('')}</select>
+          <p class="small">Replace every [square bracket] with the real moment. The desk won’t save a letter with a bracket left in. To switch starters, clear the letter box first.</p>
           <label for="day">Behind door</label><input id="day" name="day" type="number" min="1" max="24" value="14" required>
           <label for="body">Letter</label><textarea id="body" name="body" rows="5" required></textarea>
           <label for="byline">Signed</label><input id="byline" name="byline" required>
           <label for="url">Link (optional, https)</label><input id="url" name="url" type="url">
-          <button class="btn primary">Add letter</button></form></section>
+          <button class="btn primary">Add letter</button></form>
+          <script type="application/json" id="starter-data">${JSON.stringify(STARTERS).replace(/</g, '\\u003c')}</script>
+          <script src="/static/starters.js"></script></section>
         <section><h2>Import letters.csv</h2>
         <form method="post" action="/editor/letters/import">${hidden(req.csrf)}
           <label for="lcsv">Paste letters.csv (recipient_email, day, byline, letter_text)</label><textarea id="lcsv" name="csv" rows="6" required></textarea>
@@ -224,6 +248,7 @@ function mount(app) {
       const raw = String(req.body.url || '').trim();
       const url = raw ? safeHttpsUrl(raw) : null;
       if (!r || !(day >= 1 && day <= 24) || !String(req.body.body || '').trim() || !String(req.body.byline || '').trim() || (raw && !url)) return res.status(400).send('Please check the recipient, door, letter, signature and link.');
+      if (PLACEHOLDER.test(req.body.body)) return res.status(400).page('Letter', `<article class="story narrow"><h1>There’s still a [gap] to fill</h1><p>Swap each square bracket for the real moment, then save again. Use your browser’s back button: your text will still be there.</p><blockquote>${esc(String(req.body.body).match(PLACEHOLDER)[0])}</blockquote></article>`);
       await q(`insert into personal_item(edition_id, recipient_id, day, body, url, byline) values ($1,$2,$3,$4,$5,$6)`,
         [req.edition.id, r.id, day, String(req.body.body).trim(), url, String(req.body.byline).trim()]);
       res.redirect(303, '/editor/letters');
@@ -243,6 +268,7 @@ function mount(app) {
         else if (!(Number.isInteger(day) && day >= 1 && day <= 24)) err = 'day must be 1–24';
         else if (!r.letter_text) err = 'empty letter';
         else if (!r.byline) err = 'missing signature';
+        else if (PLACEHOLDER.test(r.letter_text)) err = 'still has a [gap] to fill';
         return { ...r, day, reader: matches[0], err };
       });
       const bad = checked.filter(r => r.err);

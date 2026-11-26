@@ -8,6 +8,8 @@ const { esc, paras, hidden, layout, doorGrid, mediaLink, safeHttpsUrl } = V;
 
 const RELAY_DAYS = new Set([3, 17, 21]);
 const LETTER_DAY = 14;
+const PREVIEW_COOKIE = 'dc_preview';
+const readCookie = (req, name) => { const m = (req.headers.cookie || '').match(new RegExp('(?:^|; )' + name + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : null; };
 
 function createApp() {
   const app = express();
@@ -44,7 +46,18 @@ function createApp() {
       req.now = T.now(req);
       req.edition = (await q('select * from edition where year=$1', [T.YEAR])).rows[0];
       if (req.reader) req.released = T.releasedDay(req.now, req.reader.zone);
-      res.page = (title, body, opts = {}) => res.send(layout({ title, body, reader: req.reader, now: req.now, csrf: req.csrf, ...opts }));
+      // Editor-only preview: see the paper as a reader would on a chosen day. Never applies to readers.
+      let previewBanner = null;
+      if (req.reader && req.reader.role === 'editor') {
+        const pv = Number(readCookie(req, PREVIEW_COOKIE));
+        if (Number.isInteger(pv) && pv >= 1 && pv <= 24) {
+          req.previewDay = pv;
+          req.released = pv;
+          previewBanner = `Preview mode: you’re seeing the paper as it looks on door ${pv}. Nobody else is affected, but anything you send is real.
+            <form method="post" action="/editor/preview-mode/exit" class="inline">${hidden(req.csrf)}<button class="linkish">Leave preview</button></form>`;
+        }
+      }
+      res.page = (title, body, opts = {}) => res.send(layout({ title, body, reader: req.reader, now: req.now, csrf: req.csrf, banner: previewBanner, ...opts }));
       next();
     } catch (e) { next(e); }
   });
