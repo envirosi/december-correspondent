@@ -264,9 +264,9 @@ test('the case unfolds day by day and never leaks ahead', async () => {
   const day3 = '2026-12-03T12:00:00Z';
   const board = (await req('/case', { who: P.ada, at: day3 })).text;
   assert.match(board, /The Case of the Communal Tin/);
-  assert.match(board, /oddly well framed/);           // day 3 clue
-  assert.doesNotMatch(board, /fingertip search|shortbread finger|Lift the laptop|It was me/);
-  assert.match(board, /The reindeer[\s\S]*Under suspicion/);
+  assert.match(board, /paid in carrots/);           // day 3 clue
+  assert.doesNotMatch(board, /turkey|shortbread finger|Lift the laptop|It was me|tartan stand/);
+  assert.match(board, /Santa[\s\S]*Prime suspect/);
   const door = (await req('/door/3', { who: P.ada, at: day3 })).text;
   assert.match(door, /id="enquiry"[\s\S]*The reindeer is questioned/);
   assert.match((await req('/', { who: P.ada, at: day3 })).text, /Also in today’s paper/);
@@ -274,7 +274,7 @@ test('the case unfolds day by day and never leaks ahead', async () => {
   const end = (await req('/case', { who: P.ada, at: '2026-12-24T12:00:00Z' })).text;
   assert.match(end, /Case closed[\s\S]*It was me/);
   assert.match(end, /Identified: the editor/);
-  assert.equal((end.match(/class="exhibit/g) || []).length, 25);
+  assert.equal((end.match(/class="exhibit/g) || []).length, 31);
 });
 
 test('personal pages are never cached', async () => {
