@@ -43,7 +43,15 @@ async function seed({ overwrite = false } = {}) {
   const doors = await seedDoors(edition, { overwrite });
   if (process.env.EDITOR_EMAIL) {
     const zone = T.zoneFrom(process.env.EDITOR_ZONE || 'UK');
-    await upsertReader(edition, { name: process.env.EDITOR_NAME || 'Si', email: process.env.EDITOR_EMAIL, zone, role: 'editor' });
+    const editor = await upsertReader(edition, { name: process.env.EDITOR_NAME || 'Si', email: process.env.EDITOR_EMAIL, zone, role: 'editor' });
+    // One-time bootstrap: lets the editor sign in for the first time without shell access.
+    // Only the digest is stored; once redeemed the token is spent, so the variable can be cleared.
+    const boot = process.env.EDITOR_BOOTSTRAP_TOKEN;
+    if (boot && boot.length >= 32) {
+      const { digest } = require('./auth');
+      await q(`insert into invitation(reader_id, digest, expires_at) values ($1,$2, now() + interval '7 days') on conflict (digest) do nothing`,
+        [editor.id, digest(boot)]);
+    }
   }
   return { edition, doors };
 }
