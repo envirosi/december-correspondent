@@ -83,8 +83,21 @@ test('invitations: preview-safe, single use, replaceable', async () => {
   assert.equal((await req('/welcome')).status, 200); // a link preview only GETs
   const t2 = tokenOf(await A.issueInvite(r.id)); // replacement
   assert.equal((await req('/welcome', { method: 'POST', form: { token: t1 } })).status, 400);
-  assert.equal((await req('/welcome', { method: 'POST', form: { token: t2 } })).status, 303);
+  const ok = await req('/welcome', { method: 'POST', form: { token: t2 } });
+  assert.equal(ok.status, 303);
+  assert.equal(ok.headers.get('location'), '/how?first=1');
   assert.equal((await req('/welcome', { method: 'POST', form: { token: t2 } })).status, 400);
+});
+
+test('welcome explains everything in local time', async () => {
+  const at = '2026-11-28T10:00:00Z';
+  const bea = (await req('/how?first=1', { who: P.bea, at })).text;
+  assert.match(bea, /Welcome to the Cebu desk/);
+  assert.match(bea, /Tuesday 1 December at 07:00/);
+  assert.match(bea, /Join by Tuesday 8 December at 17:00/);     // 09:00 UTC in Manila
+  const cal = (await req('/how', { who: P.cal, at })).text;
+  assert.match(cal, /Join by Tuesday 8 December at 20:00/);     // 09:00 UTC in Sydney
+  assert.match(cal, /Monday 30 November at 20:00|Tuesday 1 December at 07:00/);
 });
 
 test('letters belong to their recipient', async () => {

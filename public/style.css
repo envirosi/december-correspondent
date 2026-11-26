@@ -153,3 +153,56 @@ tr.muted { opacity: .55; }
 .diary li { border-bottom: 1px dotted var(--rule); }
 .diary a { display: block; padding: .45rem 0; text-decoration: none; }
 .diary .num { display: inline-block; min-width: 2rem; font-weight: 700; color: var(--cranberry); }
+
+/* ---------- Festive layer ---------- */
+body { background-color: var(--ivory);
+  background-image: radial-gradient(circle at 12px 14px, rgba(176,122,18,.10) 1.4px, transparent 1.6px), radial-gradient(circle at 46px 52px, rgba(154,28,51,.07) 1.2px, transparent 1.4px);
+  background-size: 64px 64px; }
+.masthead { position: relative; padding-top: 2.4rem;
+  background: radial-gradient(ellipse at 50% 120%, #24523c 0%, var(--green) 60%), var(--green); }
+.lights { position: absolute; top: 0; left: 0; width: 100%; height: 36px; display: block; }
+.masthead .title { display: inline-flex; align-items: center; gap: .5rem; }
+.tstar { width: .7em; height: .7em; flex: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .bulb ellipse { animation: twinkle 4.5s ease-in-out infinite; }
+  .bulb.b1 ellipse { animation-delay: -1.1s; } .bulb.b2 ellipse { animation-delay: -2.3s; }
+  .bulb.b3 ellipse { animation-delay: -3.2s; } .bulb.b4 ellipse { animation-delay: -.6s; }
+  .door.today { animation: glow 3.5s ease-in-out infinite; }
+}
+@keyframes twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 0 3px rgba(242,182,50,.25); } 50% { box-shadow: 0 0 0 6px rgba(242,182,50,.45); } }
+.garland { display: flex; justify-content: center; padding: .2rem 1rem 0; }
+.garland svg { width: 100%; max-width: 360px; height: auto; display: block; }
+.garland.top { background: var(--paper); border-bottom: 1px solid var(--rule); padding-bottom: .2rem; }
+.foot .garland { padding-bottom: .3rem; }
+
+/* Doors: sealed ones are wrapped parcels with a numbered gift tag */
+.door.sealed { position: relative; border: 0; overflow: hidden; align-items: center; justify-content: center;
+  --paper-c: #9a1c33; --ribbon: #f2b632;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 5px), var(--ribbon) calc(50% - 5px), var(--ribbon) calc(50% + 5px), transparent calc(50% + 5px)),
+    linear-gradient(0deg, transparent calc(50% - 5px), var(--ribbon) calc(50% - 5px), var(--ribbon) calc(50% + 5px), transparent calc(50% + 5px)),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px),
+    var(--paper-c); }
+.door.sealed.p1 { --paper-c: #1f5a3c; --ribbon: #e0566d; }
+.door.sealed.p2 { --paper-c: #b07a12; --ribbon: #fff0c2; }
+.door.sealed.p3 { --paper-c: #2b6f86; --ribbon: #f6c453; }
+.door.sealed .num { position: relative; z-index: 1; background: #fffdf7; color: var(--ink); font-size: 1.15rem; min-width: 2.3rem; height: 2.3rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.door.sealed .bow { position: absolute; top: calc(50% - 1.9rem); left: 50%; width: 1.4rem; height: .9rem; transform: translateX(-50%); }
+.door.sealed .bow::before, .door.sealed .bow::after { content: ""; position: absolute; top: 0; width: .8rem; height: .7rem; border: 3px solid var(--ribbon); border-radius: 50% 50% 0 50%; }
+.door.sealed .bow::before { left: -.25rem; transform: rotate(-20deg); }
+.door.sealed .bow::after { right: -.25rem; transform: scaleX(-1) rotate(-20deg); }
+.door.open { position: relative; background: #fffdf7; border: 1px solid #e4d6b4; }
+.door.open .dstar { position: absolute; top: .45rem; right: .45rem; width: .9rem; height: .9rem; }
+.door.today { border: 2px solid #f2b632; background: #fff8e3; }
+.btn.primary { border-top-color: #f2b632; }
+.lead h1 { position: relative; }
+.enquiry { background: #f6f1e4 linear-gradient(90deg, #9a1c33 0 33%, #1f5a3c 33% 66%, #f2b632 66%) top / 100% 4px no-repeat; border-top: 0; padding-top: 1.4rem; }
+
+/* How it works */
+.how { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: .8rem; }
+.how li { background: var(--paper); border: 1px solid var(--rule); border-radius: .35rem; padding: .8rem 1rem .8rem 3.2rem; position: relative; }
+.how li svg { position: absolute; left: .9rem; top: .95rem; width: 1.5rem; height: 1.5rem; }
+.how h2 { font-size: 1.1rem; margin: 0 0 .2rem; border: 0; padding: 0; }
+.how p { margin: 0; }
+.hello { font-size: 1.15rem; }

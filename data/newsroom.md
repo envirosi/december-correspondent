@@ -9,7 +9,11 @@ On Tuesday we open The December Correspondent, a little Christmas paper with des
 
 [Personal invitation link]
 
+There’s no password and nothing to install. Open the link on the device you’ll read on and press the button. A one-minute guide is waiting on the other side.
+
 Read when you fancy. Miss a week and the back issues will still be there. If a caption occurs to you, send it in. If all that occurs to you is tea, that’s a perfectly sound editorial decision.
+
+There is also, I’m sorry to report, an ongoing investigation. Something has gone missing. I am leading the enquiry personally, so please don’t worry.
 
 Inside there’s also a voluntary Secret Santa. A song, a GIF or a handwritten recipe counts. The spending limit is zero and Finance have been most particular on this point.
 

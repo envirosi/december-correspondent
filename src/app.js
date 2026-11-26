@@ -81,15 +81,17 @@ function createApp() {
   // ---------- Invitations ----------
   app.get('/welcome', (req, res) => {
     res.page('Your invitation', `<article class="story narrow">
-      <h1>Your invitation has arrived</h1>
-      <p>This little paper is delivered by personal invitation. Press the button to collect your copy on this device.</p>
+      <p class="kicker">Hand-delivered</p>
+      <h1>Your copy is waiting</h1>
+      <p class="hello">The December Correspondent is a small, silly Christmas paper for our UK, Cebu and Sydney desks. A door a day, a mystery, and a pigeonhole with your name on it.</p>
+      <p>No password, no app and nothing to install. Press the button and you’re in.</p>
       <form method="post" action="/welcome" id="redeem">
         <input type="hidden" name="token" id="token">
         <div class="nojs-token"><label for="token-paste">Invitation code</label>
         <input id="token-paste" name="token_paste" autocomplete="off" spellcheck="false"></div>
         <button class="btn primary">Collect my copy</button>
       </form>
-      <p class="small">Each invitation works once. If you need it on another device, ask the editor for a fresh one.</p>
+      <p class="small">This link works once and remembers this device. Want it on your phone as well? Ask the editor for a second link.</p>
     </article><script src="/static/invite.js"></script>`);
   });
 
@@ -103,7 +105,7 @@ function createApp() {
           <p>Or it has expired, or been replaced with a newer one. Ask the editor for a fresh link and it will be with you shortly.</p></article>`);
       }
       A.setSessionCookie(res, s);
-      res.redirect(303, '/');
+      res.redirect(303, '/how?first=1');
     } catch (e) { next(e); }
   });
 
@@ -163,6 +165,31 @@ function createApp() {
       <section><h2>${complete ? 'Every edition' : 'Past editions'}</h2>
       ${doorGrid({ released: n, today: complete ? 0 : n, titles, hrefFor: d => `/door/${d}`, label: 'Front-page doors' })}</section>`);
     } catch (e) { next(e); }
+  });
+
+  // ---------- How it works (shown once after first sign-in, linked from the footer) ----------
+  app.get('/how', (req, res) => {
+    const zone = req.reader.zone, ed = req.edition, now = req.now;
+    const first = req.query.first === '1';
+    const firstDoor = T.releaseInstant(1, zone);
+    const started = req.released > 0;
+    const pouchOpen = now < ed.enrol_close && !ed.drawn_at;
+    const star = V.smallStar('');
+    const item = (h, p) => `<li>${star}<h2>${h}</h2><p>${p}</p></li>`;
+    res.page('How the paper works', `<section class="lead">
+      <p class="kicker">${first ? `Welcome to the ${esc(T.zoneLabel(zone))} desk` : 'How the paper works'}</p>
+      <h1>${first ? `Hello, ${esc(req.reader.name.split(' ')[0])}` : 'The short version'}</h1>
+      <p class="standfirst">Whether you’re reading this in a jumper, in shorts or somewhere in between, here’s the whole thing in under a minute.</p></section>
+      <ol class="how">
+        ${item('Two doors every morning', `At 07:00 your time, a door opens on the front page for everyone, and another opens in <strong>your pigeonhole</strong>, just for you. ${started ? 'Some are already open.' : `The first ones open on ${esc(T.fmtFull(firstDoor, zone))}.`}`)}
+        ${item('Something has gone missing', 'Every door carries the latest instalment of <strong>The Case</strong>. There’s an evidence board if you’d like to play detective. The investigating officer is not, it’s fair to say, a natural.')}
+        ${item('Join in, or don’t', 'Some doors invite a line, a photo link or a song. Everything is optional. Nobody keeps score, there are no streaks, and nobody can see who has read what.')}
+        ${item('The Diplomatic Pouch', `An optional Secret Santa with a budget of exactly zero: a few kind words and a link to something free, like a song or a GIF. ${pouchOpen ? `Join by ${esc(T.fmtFull(ed.enrol_close, zone))}, your time.` : 'Gifts arrive in pigeonholes on 18 December.'}`)}
+        ${item('Post for you', 'Now and then your pigeonhole will have a letter in it. On door 14 you can send a private thank-you to a colleague, too.')}
+        ${item('No catching up required', 'Miss a week? Every door you’ve opened stays open. The paper closes on 31 January, and then everything in it, letters included, is deleted.')}
+      </ol>
+      <p class="actions"><a class="btn primary" href="/">${first ? 'Open the paper' : 'Back to the front page'}</a></p>
+      <p class="small">Stuck, or want it on another device? Just ask the editor. He’s a bit busy with an enquiry, but he’ll answer.</p>`);
   });
 
   app.get('/door/today', (req, res) => res.redirect(302, req.released ? `/door/${req.released}` : '/'));
