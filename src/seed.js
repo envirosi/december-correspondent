@@ -53,10 +53,11 @@ async function seedCase(edition) {
   return { entries: entries.length, clues: clues.length, suspects: suspects.length };
 }
 
-async function upsertReader(edition, { name, email, zone, role = 'reader' }) {
+async function upsertReader(edition, { name, email, zone, role = null }) {
+  // Role only changes when one is given, so re-importing the editor never demotes him.
   const r = await q(`insert into reader(edition_id, public_id, name, email, zone, role, email_token)
-      values ($1,$2,$3,lower($4),$5,$6,$7)
-      on conflict (edition_id, email) do update set name=excluded.name, zone=excluded.zone, role=excluded.role, active=true
+      values ($1,$2,$3,lower($4),$5,coalesce($6,'reader'),$7)
+      on conflict (edition_id, email) do update set name=excluded.name, zone=excluded.zone, role=coalesce($6, reader.role), active=true
       returning *`, [edition.id, crypto.randomBytes(9).toString('base64url'), name, email, zone, role, crypto.randomBytes(24).toString('base64url')]);
   return r.rows[0];
 }

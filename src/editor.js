@@ -3,6 +3,7 @@ const T = require('./time');
 const A = require('./auth');
 const { parseCsv } = require('./csv');
 const { upsertReader } = require('./seed');
+const ROSTER = require('./roster');
 const { runDraw } = require('./pouch');
 const { esc, paras, hidden, mediaLink, safeHttpsUrl } = require('./views');
 
@@ -84,50 +85,54 @@ function mount(app) {
   app.get('/editor/readers', async (req, res, next) => {
     try {
       const rows = await readersOf(req.edition);
-      desk(res, 'Readers', `<h1>Readers &amp; invitations</h1>
+      desk(res, 'Readers', `<h1>Readers &amp; invitations</h1>${req.query.imported ? `<p class="flash" role="status">Added ${Number(req.query.imported) || 0}. Nobody has been invited yet.</p>` : ''}
         <table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Desk</th><th>Role</th><th>Invitation</th></tr></thead><tbody>
         ${rows.map(r => `<tr${r.active ? '' : ' class="muted"'}><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${esc(T.zoneLabel(r.zone))}</td><td>${esc(r.role)}</td>
           <td><form method="post" action="/editor/readers/${r.id}/invite" class="inline">${hidden(req.csrf)}<button class="btn small">New link</button></form>
           <form method="post" action="/editor/readers/${r.id}/revoke" class="inline">${hidden(req.csrf)}<button class="linkish">Sign out everywhere</button></form></td></tr>`).join('')}
         </tbody></table>
         <p class="small">A new link replaces any unused one and leaves existing devices signed in. “Sign out everywhere” ends all sessions and unused links.</p>
-        <h2>Import readers</h2>
+        <h2>Add your team</h2>
         <form method="post" action="/editor/readers/import">${hidden(req.csrf)}
-          <label for="csv">Paste team.csv (display_name, work_email, timezone, role). Timezone can be UK, Cebu or Sydney.</label>
-          <textarea id="csv" name="csv" rows="8" required></textarea>
-          <button class="btn" name="go" value="preview">Preview import</button></form>`);
+          <label for="csv">Paste from a spreadsheet, or type one person per line: name, email, desk</label>
+          <p class="small">Desk can be UK, Cebu or Sydney (London, Philippines, Australia and so on also work). Headings and column order don’t matter. Nobody is invited until you create their link.</p>
+          <textarea id="csv" name="csv" rows="8" required placeholder="Jo Bloggs, jo@envirotrees.uk, UK&#10;Maria Santos, maria@envirotrees.uk, Cebu&#10;Sam Lee, sam@envirotrees.uk, Sydney"></textarea>
+          <button class="btn primary" name="go" value="preview">Check the list</button></form>
+        <h2>Or add one person</h2>
+        <form method="post" action="/editor/readers/add" class="add-one">${hidden(req.csrf)}
+          <label for="a-n">Name</label><input id="a-n" name="name" required>
+          <label for="a-e">Work email</label><input id="a-e" name="email" type="email" required>
+          <label for="a-z">Desk</label><select id="a-z" name="zone" required><option value="">Choose…</option>${T.ZONES.map(z => `<option value="${z.label}">${z.label}</option>`).join('')}</select>
+          <button class="btn">Add</button></form>`);
     } catch (e) { next(e); }
   });
 
   app.post('/editor/readers/import', async (req, res, next) => {
     try {
-      const rows = parseCsv(req.body.csv);
-      const seen = new Set();
-      const checked = rows.map(r => {
-        const email = (r.work_email || '').toLowerCase();
-        const zone = T.zoneFrom(r.timezone);
-        const role = (r.role || 'reader').toLowerCase();
-        let err = null;
-        if (!r.display_name) err = 'missing name';
-        else if (!EMAIL_RE.test(email)) err = 'bad email';
-        else if (!zone) err = 'unknown timezone';
-        else if (!['reader', 'editor'].includes(role)) err = 'role must be reader or editor';
-        else if (seen.has(email)) err = 'duplicate email in file';
-        seen.add(email);
-        return { ...r, email, zone, role, err };
-      });
+      const checked = ROSTER.check(ROSTER.parseRoster(req.body.csv));
       const bad = checked.filter(r => r.err);
+      if (!checked.length) return desk(res, 'Check the list', '<h1>Nothing to import</h1><p>The box looked empty. <a href="/editor/readers">Back</a></p>');
       if (req.body.go === 'commit' && !bad.length) {
-        for (const r of checked) await upsertReader(req.edition, { name: r.display_name, email: r.email, zone: r.zone, role: r.role });
-        return desk(res, 'Imported', `<h1>Imported ${checked.length} readers</h1><p><a class="btn" href="/editor/readers">Back to readers</a></p>`);
+        for (const r of checked) await upsertReader(req.edition, { name: r.name, email: r.email, zone: r.zone, role: r.role });
+        return res.redirect(303, `/editor/readers?imported=${checked.length}`);
       }
-      desk(res, 'Import preview', `<h1>Import preview</h1>
-        <table class="tbl"><thead><tr><th>Row</th><th>Name</th><th>Email</th><th>Desk</th><th>Role</th><th>Check</th></tr></thead><tbody>
-        ${checked.map(r => `<tr${r.err ? ' class="err"' : ''}><td>${r._row}</td><td>${esc(r.display_name)}</td><td>${esc(r.email)}</td><td>${esc(r.zone ? T.zoneLabel(r.zone) : r.timezone)}</td><td>${esc(r.role)}</td><td>${r.err ? esc(r.err) : 'OK'}</td></tr>`).join('')}
+      desk(res, 'Check the list', `<h1>Check the list</h1>
+        <table class="tbl"><thead><tr><th>Line</th><th>Name</th><th>Email</th><th>Desk</th><th>Check</th></tr></thead><tbody>
+        ${checked.map(r => `<tr${r.err ? ' class="err"' : ''}><td>${r.row}</td><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${esc(r.zone ? T.zoneLabel(r.zone) : r.zoneRaw)}</td><td>${r.err ? esc(r.err) : 'OK'}</td></tr>`).join('')}
         </tbody></table>
-        ${bad.length ? `<p class="flash err">${bad.length} row(s) need fixing before import. Nothing has been saved.</p><p><a href="/editor/readers">Back</a></p>` :
+        ${bad.length ? `<p class="flash err">${bad.length} line(s) need fixing. Nothing has been saved yet.</p>
+          <form method="post" action="/editor/readers/import">${hidden(req.csrf)}<label for="csv2">Fix the list here and check again</label><textarea id="csv2" name="csv" rows="8">${esc(req.body.csv)}</textarea><button class="btn primary" name="go" value="preview">Check again</button></form>` :
           `<form method="post" action="/editor/readers/import">${hidden(req.csrf)}<textarea name="csv" hidden>${esc(req.body.csv)}</textarea>
-           <button class="btn primary" name="go" value="commit">Import ${checked.length} readers</button> <a href="/editor/readers">Cancel</a></form>`}`);
+           <button class="btn primary" name="go" value="commit">Add ${checked.length} ${checked.length === 1 ? 'person' : 'people'}</button> <a href="/editor/readers">Cancel</a></form>`}`);
+    } catch (e) { next(e); }
+  });
+
+  app.post('/editor/readers/add', async (req, res, next) => {
+    try {
+      const [r] = ROSTER.check([{ row: 1, name: String(req.body.name || '').trim(), email: String(req.body.email || '').trim().toLowerCase(), zoneRaw: String(req.body.zone || ''), zone: T.zoneFrom(req.body.zone), role: null }]);
+      if (r.err) return res.status(400).page('Add a reader', `<article class="story narrow"><h1>Not quite</h1><p>${esc(r.err)}. Go back and try again.</p></article>`);
+      await upsertReader(req.edition, { name: r.name, email: r.email, zone: r.zone });
+      res.redirect(303, '/editor/readers?imported=1');
     } catch (e) { next(e); }
   });
 

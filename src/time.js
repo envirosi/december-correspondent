@@ -10,11 +10,16 @@ const ENROL_CLOSE = new Date('2026-12-08T09:00:00Z');
 const GIFT_DAY = 18;
 const CLOSE_AT = new Date(process.env.CLOSE_AT || '2027-02-01T00:00:00Z');
 
+// Forgiving: accepts desk names, countries, cities, abbreviations and IANA names.
 function zoneFrom(input) {
-  const s = String(input || '').trim().toLowerCase();
-  if (['europe/london', 'uk', 'london', 'gb'].includes(s)) return 'Europe/London';
-  if (['asia/manila', 'cebu', 'manila', 'philippines', 'ph'].includes(s)) return 'Asia/Manila';
-  if (['australia/sydney', 'sydney', 'australia', 'au'].includes(s)) return 'Australia/Sydney';
+  const s = String(input || '').trim().toLowerCase().replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!s) return null;
+  const tokens = s.split(/[\s,;]+/);
+  // Short codes (uk, au, ph, gmt…) must be whole words, so "Paula" never means Australia.
+  const has = words => words.some(w => s === w || (w.length <= 4 || w.includes('+') ? tokens.includes(w) : s.includes(w)));
+  if (has(['europe/london', 'uk', 'united kingdom', 'england', 'scotland', 'wales', 'britain', 'london', 'gb', 'gmt', 'bst'])) return 'Europe/London';
+  if (has(['asia/manila', 'cebu', 'manila', 'philippines', 'ph', 'pht', 'utc+8', 'gmt+8'])) return 'Asia/Manila';
+  if (has(['australia/sydney', 'sydney', 'australia', 'au', 'nsw', 'aedt', 'aest', 'utc+11', 'gmt+11', 'utc+10', 'gmt+10'])) return 'Australia/Sydney';
   return null;
 }
 const zoneLabel = z => (ZONES.find(x => x.key === z) || {}).label || z;

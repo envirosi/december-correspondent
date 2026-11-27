@@ -348,6 +348,20 @@ test('nudges: polls, crackers, gold stars, hats, offline, paper chain', async ()
   assert.match((await req('/door/23', { who: P.bea, at: d23 })).text, /Good things from our year[\s\S]*Sydney desk[\s\S]*Survived the new job system/);
 });
 
+test('team import: spreadsheet paste, typed lines, add one, editor never demoted', async () => {
+  const paste = 'Name\tEmail\tTime zone\nJo Bloggs\tjo@import.test\tUK\nMaria Santos\tmaria@import.test\tPhilippines\nEd Itor\ted@t.test\tUK';
+  const preview = await post(P.ed, '/editor/readers/import', { csv: paste, go: 'preview' });
+  assert.match(preview.text, /Maria Santos[\s\S]*Cebu[\s\S]*Add 3 people/);
+  await post(P.ed, '/editor/readers/import', { csv: paste, go: 'commit' });
+  const rows = (await q(`select email, zone, role from reader where email in ('jo@import.test','maria@import.test','ed@t.test') order by email`)).rows;
+  assert.deepEqual(rows.map(r => [r.email, r.zone, r.role]), [['ed@t.test', 'Europe/London', 'editor'], ['jo@import.test', 'Europe/London', 'reader'], ['maria@import.test', 'Asia/Manila', 'reader']]);
+  const typed = await post(P.ed, '/editor/readers/import', { csv: 'Sam Lee, sam@import.test, Sydney\nNo Desk, nodesk@import.test\nPaula Mars, paula@import.test, Mars', go: 'commit' });
+  assert.match(typed.text, /2 line\(s\) need fixing[\s\S]*no time zone|no time zone[\s\S]*2 line\(s\) need fixing/);
+  assert.equal((await q(`select count(*)::int n from reader where email like '%@import.test' and email <> 'jo@import.test' and email <> 'maria@import.test'`)).rows[0].n, 0, 'nothing saved when a line is wrong');
+  await post(P.ed, '/editor/readers/add', { name: 'Kai Reyes', email: 'kai@import.test', zone: 'Sydney' });
+  assert.equal((await q(`select zone from reader where email='kai@import.test'`)).rows[0].zone, 'Australia/Sydney');
+});
+
 test('personal pages are never cached', async () => {
   const r = await req('/pigeonhole', { who: P.ada });
   assert.match(r.headers.get('cache-control'), /no-store/);
