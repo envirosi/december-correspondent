@@ -65,6 +65,7 @@ async function seed({ overwrite = false } = {}) {
   const edition = await ensureEdition();
   const doors = await seedDoors(edition, { overwrite });
   const caseFile = await seedCase(edition);
+  const nudges = await require('./nudges').seedNudges(edition);
   if (process.env.EDITOR_EMAIL) {
     const zone = T.zoneFrom(process.env.EDITOR_ZONE || 'UK');
     const editor = await upsertReader(edition, { name: process.env.EDITOR_NAME || 'Si', email: process.env.EDITOR_EMAIL, zone, role: 'editor' });
@@ -77,7 +78,7 @@ async function seed({ overwrite = false } = {}) {
         [editor.id, digest(boot)]);
     }
   }
-  return { edition, doors, caseFile };
+  return { edition, doors, caseFile, nudges };
 }
 
 module.exports = { seed, ensureEdition, seedDoors, seedCase, upsertReader };

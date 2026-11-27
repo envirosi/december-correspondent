@@ -290,6 +290,56 @@ test('the case unfolds day by day and never leaks ahead', async () => {
   assert.equal((end.match(/class="exhibit/g) || []).length, 31);
 });
 
+test('nudges: polls, crackers, gold stars, hats, offline, paper chain', async () => {
+  // Poll on door 2: only once the door is open; results by desk after voting.
+  assert.equal((await post(P.bea, '/nudge/2/vote', { choice: '1' }, '2026-11-30T23:30:00Z')).status, 404);
+  const d2 = '2026-12-02T12:00:00Z';
+  assert.match((await req('/door/2', { who: P.ada, at: d2 })).text, /mince pies a day[\s\S]*Results by desk appear once you’ve voted/);
+  await post(P.ada, '/nudge/2/vote', { choice: '1' }, d2);
+  const voted = (await req('/door/2', { who: P.ada, at: d2 })).text;
+  assert.match(voted, /UK desk[\s\S]*One, with dignity[\s\S]*100%/);
+  assert.match(voted, /Cebu desk[\s\S]*No votes yet/);
+
+  // Cracker on door 4: lands in the recipient's pigeonhole, max three a day.
+  const d4 = '2026-12-04T12:00:00Z';
+  await post(P.ada, '/nudge/4/cracker', { to: String(P.bea.id) }, d4);
+  assert.match((await req('/pigeonhole/4', { who: P.bea, at: d4 })).text, /Crackers[\s\S]*Ada \(UK\) pulled a cracker with you/);
+  assert.match((await req('/pigeonhole/4', { who: P.bea, at: d4 })).text, /Pull the other end/);
+  await post(P.ada, '/nudge/4/cracker', { to: String(P.cal.id) }, d4);
+  await post(P.ada, '/nudge/4/cracker', { to: String(P.cal.id) }, d4);
+  const fourth = await post(P.ada, '/nudge/4/cracker', { to: String(P.cal.id) }, d4);
+  assert.match(fourth.headers.get('location'), /limit/);
+  const self = await post(P.ada, '/nudge/4/cracker', { to: String(P.ada.id) }, d4);
+  assert.doesNotMatch(self.headers.get('location'), /nudged=cracker/);
+  assert.equal((await post(P.ada, '/nudge/5/cracker', { to: String(P.bea.id) }, '2026-12-05T12:00:00Z')).status, 404, 'no cracker on door 5');
+
+  // Gold stars on door 9: plain ones arrive at once; notes wait for the editor.
+  const d9 = '2026-12-09T12:00:00Z';
+  await post(P.bea, '/nudge/9/star', { to: String(P.cal.id), reason: '2' }, d9);
+  await post(P.bea, '/nudge/9/star', { to: String(P.ada.id), reason: '1', note: 'The spreadsheet thing. Hero.' }, d9);
+  assert.match((await req('/pigeonhole/9', { who: P.cal, at: d9 })).text, /Gold stars[\s\S]*Saved my bacon/);
+  assert.doesNotMatch((await req('/pigeonhole/9', { who: P.ada, at: d9 })).text, /Hero/);
+  const pend = (await q(`select id from personal_item where body like '%Hero%'`)).rows[0];
+  await post(P.ed, `/editor/letters/${pend.id}/review`, { act: 'approve' }, d9);
+  assert.match((await req('/pigeonhole/9', { who: P.ada, at: d9 })).text, /Made me laugh[\s\S]*Hero/);
+
+  // Offline nudge and hat parade.
+  assert.match((await req('/door/10', { who: P.ada, at: '2026-12-10T12:00:00Z' })).text, /No button today/);
+  const d11 = '2026-12-11T12:00:00Z';
+  await post(P.cal, '/nudge/11/hat', {}, d11);
+  assert.match((await req('/door/11', { who: P.ada, at: d11 })).text, /hat parade[\s\S]*Cal \(Sydney\)/);
+
+  // Paper chain: counts at once on the masthead, words only on door 23 once approved.
+  await post(P.cal, '/chain', { body: 'Survived the new job system' }, d4);
+  const front = (await req('/', { who: P.bea, at: d4 })).text;
+  assert.match(front, /Paper chain · 1 link/);
+  assert.doesNotMatch(front, /Survived the new job system/);
+  const d23 = '2026-12-23T12:00:00Z';
+  assert.doesNotMatch((await req('/door/23', { who: P.bea, at: d23 })).text, /Survived the new job system/);
+  await post(P.ed, '/editor/chain/approve-all', {}, d23);
+  assert.match((await req('/door/23', { who: P.bea, at: d23 })).text, /Good things from our year[\s\S]*Sydney desk[\s\S]*Survived the new job system/);
+});
+
 test('personal pages are never cached', async () => {
   const r = await req('/pigeonhole', { who: P.ada });
   assert.match(r.headers.get('cache-control'), /no-store/);

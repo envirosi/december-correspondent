@@ -1,0 +1,186 @@
+{
+  "nudges": [
+    {
+      "day": 1,
+      "kind": "chain",
+      "title": "Start the paper chain",
+      "body": "Add one link to the paper chain: a small good thing from your year, in a few words. Finished a tricky job, learned a new system, kept a houseplant alive. Watch the chain grow across the masthead all month. On door 23 we print the whole thing, with no names attached."
+    },
+    {
+      "day": 2,
+      "kind": "poll",
+      "title": "The Great Desk Debate",
+      "body": "How many mince pies a day is correct?",
+      "options": [
+        "None. I don’t trust them",
+        "One, with dignity",
+        "Two to four",
+        "I’ve lost count and I’m at peace with it"
+      ]
+    },
+    {
+      "day": 4,
+      "kind": "cracker",
+      "title": "Pull a cracker",
+      "body": "Pick a colleague and pull a Christmas cracker with them. They’ll find the hat, the prize and a dreadful joke in their pigeonhole. It takes one tap and costs nothing but your dignity."
+    },
+    {
+      "day": 7,
+      "kind": "poll",
+      "title": "The Great Desk Debate",
+      "body": "Is a satsuma a dessert?",
+      "options": [
+        "Yes",
+        "No",
+        "Only in December",
+        "A satsuma is a lifestyle"
+      ]
+    },
+    {
+      "day": 8,
+      "kind": "cracker",
+      "title": "Another cracker?",
+      "body": "The cracker supply has been replenished. Pick a colleague who could do with a paper hat today."
+    },
+    {
+      "day": 9,
+      "kind": "star",
+      "title": "Hand out a gold star",
+      "body": "Give a colleague a gold star. Choose a reason and, if you like, add a few words of your own. It lands quietly in their pigeonhole."
+    },
+    {
+      "day": 10,
+      "kind": "offline",
+      "title": "No button today",
+      "body": "Think of someone who’s had a heavy month. Send them a message today, anywhere but here: a quick “thinking of you”, a meme, a thank-you. Nobody will know whether you did it. That’s rather the point."
+    },
+    {
+      "day": 11,
+      "kind": "hat",
+      "title": "Paper hat Friday",
+      "body": "Wear a paper hat on a call today. A cracker hat, a newspaper hat or one folded from a work document all count. Then press the button and your name joins the hat parade below."
+    },
+    {
+      "day": 15,
+      "kind": "poll",
+      "title": "The Great Desk Debate",
+      "body": "What’s the ideal temperature for Christmas Day?",
+      "options": [
+        "Below zero, with a scarf",
+        "Mild, light jumper",
+        "Warm enough for the beach",
+        "Whatever the air-con says"
+      ]
+    },
+    {
+      "day": 16,
+      "kind": "star",
+      "title": "More gold stars",
+      "body": "The gold star cupboard has been restocked. Who’s earned one this month?"
+    },
+    {
+      "day": 21,
+      "kind": "cracker",
+      "title": "The last crackers",
+      "body": "The final crackers of the year. Pull one with someone you haven’t pulled one with yet."
+    },
+    {
+      "day": 22,
+      "kind": "poll",
+      "title": "The Great Desk Debate",
+      "body": "When should Christmas decorations go up?",
+      "options": [
+        "September. It’s tradition",
+        "1 December, by the rules",
+        "When someone finds the box",
+        "They never came down"
+      ]
+    }
+  ],
+  "cracker_prizes": [
+    "a paper hat in a colour that suits nobody",
+    "a tiny screwdriver for a screw that doesn’t exist",
+    "a fortune-telling fish",
+    "a moustache on a stick",
+    "a single dice",
+    "a plastic ring that fits no finger",
+    "a miniature pack of cards, missing the seven of clubs",
+    "a whistle you will regret"
+  ],
+  "cracker_jokes": [
+    [
+      "Why was the Christmas tree bad at meetings?",
+      "It kept getting needled."
+    ],
+    [
+      "What’s a tree surgeon’s favourite carol?",
+      "Oak Come, All Ye Faithful."
+    ],
+    [
+      "Where do biscuit tins go on holiday?",
+      "Tin-erife."
+    ],
+    [
+      "Why did the biscuit go to the doctor?",
+      "It was feeling crummy."
+    ],
+    [
+      "What’s a tree’s favourite day of the working week?",
+      "Fir-day."
+    ],
+    [
+      "What did one Christmas light say to the other?",
+      "Let’s not get too wired."
+    ],
+    [
+      "Why did the email go to the Christmas party?",
+      "It was forwarded an invitation."
+    ],
+    [
+      "How does a sheep say Merry Christmas?",
+      "Fleece Navidad."
+    ],
+    [
+      "What did the stamp say to the Christmas card?",
+      "Stick with me and we’ll go places."
+    ],
+    [
+      "Why are Christmas trees terrible at knitting?",
+      "They keep dropping their needles."
+    ],
+    [
+      "What do you call Santa when he stops for a break?",
+      "Santa Pause."
+    ],
+    [
+      "What do you call a reindeer with no eyes?",
+      "No idea."
+    ],
+    [
+      "What do elves learn at school?",
+      "The elf-abet."
+    ],
+    [
+      "What’s the best thing to put in a Christmas pudding?",
+      "Your spoon."
+    ],
+    [
+      "Why did the arborist bring a ladder to the party?",
+      "He heard the drinks were on the top shelf."
+    ],
+    [
+      "What do you call a snowman in Sydney in December?",
+      "A puddle."
+    ]
+  ],
+  "star_reasons": [
+    "Kept me calm",
+    "Made me laugh",
+    "Saved my bacon",
+    "Always explains things twice",
+    "Picked up something I dropped",
+    "Made a hard week easier",
+    "Excellent at chasing",
+    "Just lovely to work with"
+  ]
+}

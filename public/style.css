@@ -206,3 +206,69 @@ body { background-color: var(--ivory);
 .how h2 { font-size: 1.1rem; margin: 0 0 .2rem; border: 0; padding: 0; }
 .how p { margin: 0; }
 .hello { font-size: 1.15rem; }
+
+/* ---------- Nudges ---------- */
+.nudge-line a { font-weight: 600; }
+.nudge { margin: 1.5rem 0; padding: 1rem 1.25rem .8rem; border-radius: .4rem; background: #fff8e3; border: 2px dashed #e3b546; }
+.nudge h2 { border: 0; padding-top: 0; margin: .2rem 0 .5rem; font-size: 1.35rem; }
+.nudge-offline { background: #eef5ef; border: 1px solid #b6d1bd; }
+.nudge-cracker .cracker-btn { background: var(--cranberry); border-color: var(--cranberry); }
+.poll fieldset { background: #fffdf7; }
+.poll-q { font-weight: 600; }
+.results { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: .5rem 0; }
+.desk-result { background: #fffdf7; border: 1px solid var(--rule); border-radius: .3rem; padding: .6rem .8rem; }
+.desk-result h4 { margin: 0 0 .4rem; font-family: var(--sans); font-size: .95rem; }
+.bar { display: grid; grid-template-columns: 1fr 5rem 2.6rem; gap: .4rem; align-items: center; font-family: var(--sans); font-size: .85rem; margin: .2rem 0; }
+.bt { height: .7rem; background: #efe6d1; border-radius: 1rem; overflow: hidden; }
+.bf { display: block; height: 100%; background: var(--green-2); border-radius: 1rem; }
+.bp { text-align: right; color: var(--muted); }
+.bf.w0 { width: 0%; }
+.bf.w5 { width: 5%; }
+.bf.w10 { width: 10%; }
+.bf.w15 { width: 15%; }
+.bf.w20 { width: 20%; }
+.bf.w25 { width: 25%; }
+.bf.w30 { width: 30%; }
+.bf.w35 { width: 35%; }
+.bf.w40 { width: 40%; }
+.bf.w45 { width: 45%; }
+.bf.w50 { width: 50%; }
+.bf.w55 { width: 55%; }
+.bf.w60 { width: 60%; }
+.bf.w65 { width: 65%; }
+.bf.w70 { width: 70%; }
+.bf.w75 { width: 75%; }
+.bf.w80 { width: 80%; }
+.bf.w85 { width: 85%; }
+.bf.w90 { width: 90%; }
+.bf.w95 { width: 95%; }
+.bf.w100 { width: 100%; }
+
+.parade-h { font-size: 1.05rem; margin: 1rem 0 .3rem; }
+.parade { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem .9rem; font-family: var(--sans); }
+.phat { display: inline-block; width: 1.1rem; height: .8rem; margin-right: .3rem; vertical-align: -.05rem;
+  background: linear-gradient(135deg, transparent 33%, #e0566d 33%, #e0566d 66%, transparent 66%) 0 0 / .37rem 100% repeat-x;
+  clip-path: polygon(0 100%, 0 30%, 16% 0, 33% 30%, 50% 0, 66% 30%, 83% 0, 100% 30%, 100% 100%); background-color: #f6c453; }
+.letter.cracker { border-left: 5px solid var(--cranberry); }
+.letter.star { border-left: 5px solid #f2b632; background: #fffbea; }
+
+/* Paper chain strip on the masthead */
+.chain-strip { display: block; margin: .7rem auto 0; max-width: 40rem; text-decoration: none; color: var(--ivory); font-family: var(--sans); font-size: .8rem; }
+.chain-title { display: block; color: var(--brass-light); letter-spacing: .08em; text-transform: uppercase; font-size: .72rem; margin-bottom: .2rem; }
+.strand { display: flex; align-items: center; justify-content: center; gap: 0; margin: .15rem 0; min-height: 1rem; flex-wrap: nowrap; overflow: hidden; }
+.sdesk { width: 3.6rem; text-align: right; margin-right: .5rem; font-weight: 600; flex: none; }
+.lk { display: inline-block; width: .85rem; height: .55rem; border: 2.5px solid; border-radius: .4rem; margin-left: -.18rem; flex: none; }
+.lk.l0 { border-color: #f6c453; } .lk.l1 { border-color: #e0566d; } .lk.l2 { border-color: #7cc58a; } .lk.l3 { border-color: #fff0c2; }
+.more { margin-left: .4rem; color: var(--brass-light); white-space: nowrap; }
+.chain-strip:hover .chain-title { text-decoration: underline; }
+.chain-big { background: var(--green); border-radius: .4rem; padding: .6rem 1rem .9rem; margin: 1rem 0; }
+.chain-big .chain-strip { margin-top: 0; }
+.chain-print { margin: 1.5rem 0; padding: 1rem 1.25rem; background: #fffdf7; border: 1px solid var(--rule); border-radius: .3rem; }
+.chain-print h2 { border: 0; padding-top: 0; margin-top: .2rem; }
+.links li { margin: .25rem 0; }
+.chain-strip { width: fit-content; }
+.chain-title { text-align: center; }
+.strand { justify-content: flex-start; }
+.joke-q { font-weight: 600; margin-bottom: .2rem; }
+.joke summary { font-size: .95rem; }
+.joke p { font-style: italic; margin: .3rem 0 0; }

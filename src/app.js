@@ -6,6 +6,7 @@ const V = require('./views');
 const A = require('./auth');
 const { esc, paras, hidden, layout, doorGrid, mediaLink, safeHttpsUrl } = V;
 const CASE = require('./casefile');
+const NUDGE = require('./nudges');
 
 const RELAY_DAYS = new Set([3, 17, 21]);
 const LETTER_DAY = 14;
@@ -58,7 +59,8 @@ function createApp() {
             <form method="post" action="/editor/preview-mode/exit" class="inline">${hidden(req.csrf)}<button class="linkish">Leave preview</button></form>`;
         }
       }
-      res.page = (title, body, opts = {}) => res.send(layout({ title, body, reader: req.reader, now: req.now, csrf: req.csrf, banner: previewBanner, ...opts }));
+      const chain = req.reader && req.released > 0 ? NUDGE.chainStrip(await NUDGE.chainCounts(req.edition.id)) : '';
+      res.page = (title, body, opts = {}) => res.send(layout({ title, body, reader: req.reader, now: req.now, csrf: req.csrf, banner: previewBanner, chain, ...opts }));
       next();
     } catch (e) { next(e); }
   });
@@ -156,11 +158,13 @@ function createApp() {
       const titles = await titlesUpTo(ed, n, 'shared_title');
       const caseLine = await CASE.headline(ed.id, n);
       const complete = n === 24 && T.releasedDay(new Date(req.now.getTime() - 86400000), zone) === 24;
+      const nudgeLine = complete ? null : await NUDGE.headline(ed.id, n);
       res.page(null, `<section class="lead">
         <p class="kicker">${complete ? 'The complete edition' : `Door ${n} · ${esc(T.fmtDay(n))}`}</p>
         <h1>${esc(door.shared_title)}</h1>
         <p class="actions"><a class="btn primary" href="/door/${n}">Open today’s door</a> <a class="btn" href="/pigeonhole/${n}">My pigeonhole</a></p>
         ${caseLine ? `<p class="also">Also in today’s paper: <a href="/door/${n}#enquiry">The Case of the Communal Tin, day ${n}: ${esc(caseLine)}</a></p>` : ''}
+        ${nudgeLine ? `<p class="also nudge-line">One-minute extra: <a href="/door/${n}#nudge">${esc(nudgeLine)}</a></p>` : ''}
       </section>
       <section><h2>${complete ? 'Every edition' : 'Past editions'}</h2>
       ${doorGrid({ released: n, today: complete ? 0 : n, titles, hrefFor: d => `/door/${d}`, label: 'Front-page doors' })}</section>`);
@@ -245,6 +249,8 @@ function createApp() {
         <p class="kicker">Door ${day} · ${esc(T.fmtDay(day))}</p>
         <h1>${esc(door.shared_title)}</h1>${paras(door.shared_body)}</article>
         ${await CASE.enquirySection(ed.id, day)}
+        ${await NUDGE.card(req, day)}
+        ${day === NUDGE.CHAIN_PRINT_DAY ? await NUDGE.chainPrint(ed.id) : ''}
         ${prompt}${list}
         <nav class="pager" aria-label="Other doors">${day > 1 ? `<a href="/door/${day - 1}">← Door ${day - 1}</a>` : '<span></span>'}
         <a href="/pigeonhole/${day}">Your pigeonhole for today</a>
@@ -312,7 +318,12 @@ function createApp() {
       const items = (await q(`select * from personal_item where recipient_id=$1 and day=$2 and status='approved' order by created_at`, [req.reader.id, day])).rows;
       let parcels = [];
       if (day === T.GIFT_DAY) parcels = (await q(`select * from parcel where recipient_id=$1 and sealed_at is not null order by sealed_at`, [req.reader.id])).rows;
-      const letters = items.length ? `<section class="envelope"><h2>Personal post</h2>${items.map(i => `<div class="letter"><a class="small" href="/post/${i.id}">Open on its own</a>${paras(i.body)}${mediaLink(i.url)}<p class="sig">${esc(i.byline)}</p></div>`).join('')}</section>` : '';
+      const KIND = { letter: 'Personal post', cracker: 'Crackers', star: 'Gold stars' };
+      const letters = ['letter', 'cracker', 'star'].map(k => {
+        const mine = items.filter(i => i.kind === k);
+        if (!mine.length) return '';
+        return `<section class="envelope env-${k}"><h2>${KIND[k]}</h2>${mine.map(i => `<div class="letter ${k}">${k === 'letter' ? `<a class="small" href="/post/${i.id}">Open on its own</a>` : ''}${k === 'cracker' ? crackerHtml(i.body) : paras(i.body)}${mediaLink(i.url)}${k === 'letter' ? `<p class="sig">${esc(i.byline)}</p>` : ''}</div>`).join('')}</section>`;
+      }).join('');
       const gifts = parcels.length ? `<section class="envelope parcel"><h2>From the Diplomatic Pouch</h2>${parcels.map(p => parcelHtml(p, req.csrf)).join('')}</section>` : '';
       res.page(door.private_title, `<article class="story private">
         <p class="kicker">Pigeonhole · door ${day}</p><h1>${esc(door.private_title)}</h1>${paras(door.private_body)}</article>
@@ -320,6 +331,13 @@ function createApp() {
         <nav class="pager" aria-label="Other doors">${day > 1 ? `<a href="/pigeonhole/${day - 1}">← ${day - 1}</a>` : '<span></span>'}<a href="/pigeonhole">All my doors</a>${day < req.released ? `<a href="/pigeonhole/${day + 1}">${day + 1} →</a>` : '<span></span>'}</nav>`);
     } catch (e) { next(e); }
   });
+
+  // Cracker body: intro paragraph, then "question\nanswer". The answer is a tap-to-reveal.
+  function crackerHtml(body) {
+    const parts = String(body).split(/\n\s*\n/);
+    const joke = (parts.pop() || '').split('\n');
+    return `${paras(parts.join('\n\n'))}<p class="joke-q">${esc(joke[0] || '')}</p><details class="joke"><summary>Pull the other end</summary><p>${esc(joke.slice(1).join(' '))}</p></details>`;
+  }
 
   function parcelHtml(p, csrf) {
     return `<div class="letter"><p class="small">${p.reserve ? 'Prepared by the editor' : 'From a colleague, sealed with wax'} · <a href="/parcel/${p.id}">Open on its own</a></p>${paras(p.body)}${mediaLink(p.url)}
@@ -354,6 +372,7 @@ function createApp() {
   });
 
   require('./pouch').mount(app);
+  NUDGE.mount(app);
   CASE.mount(app);
   require('./editor').mount(app);
 

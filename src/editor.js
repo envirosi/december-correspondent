@@ -18,14 +18,14 @@ function mount(app) {
   });
   const desk = (res, title, body) => res.page(title, `<div class="desk-wrap"><nav class="subnav" aria-label="Editor’s desk">
       <a href="/editor">Overview</a><a href="/editor/readers">Readers &amp; invites</a><a href="/editor/doors">Doors</a>
-      <a href="/editor/letters">Letters</a><a href="/editor/contributions">Contributions</a><a href="/editor/pouch">Pouch</a></nav>${body}</div>`,
+      <a href="/editor/letters">Letters</a><a href="/editor/contributions">Contributions</a><a href="/editor/chain">Paper chain</a><a href="/editor/pouch">Pouch</a></nav>${body}</div>`,
     { banner: 'Editor’s desk · readers never see this page' });
   const readersOf = async ed => (await q('select * from reader where edition_id=$1 order by name', [ed.id])).rows;
   const sel = (rows, name, selected, extra = '') => `<select name="${name}" id="${name}" ${extra}><option value="">Choose…</option>${rows.map(r => `<option value="${r.id}"${r.id === selected ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`;
 
   async function coverage(ed) {
     return (await q(`select r.id, r.name from reader r where r.edition_id=$1 and r.active
-        and not exists (select 1 from personal_item i where i.recipient_id=r.id and i.status='approved') order by r.name`, [ed.id])).rows;
+        and not exists (select 1 from personal_item i where i.recipient_id=r.id and i.status='approved' and i.kind='letter') order by r.name`, [ed.id])).rows;
   }
   async function reservesNeeded(ed) {
     return (await q(`select r.id, r.name, (e.withdrawn_at is not null) as giver_out
@@ -41,18 +41,20 @@ function mount(app) {
   app.get('/editor', async (req, res, next) => {
     try {
       const ed = req.edition;
-      const [readers, pend, notes, cov, enr] = await Promise.all([
+      const [readers, pend, notes, cov, enr, chainPend] = await Promise.all([
         q('select count(*)::int n from reader where edition_id=$1 and active', [ed.id]),
         q(`select count(*)::int n from contribution where edition_id=$1 and state='pending' and consent`, [ed.id]),
         q(`select count(*)::int n from personal_item where edition_id=$1 and status='pending'`, [ed.id]),
         coverage(ed),
         q('select count(*)::int n from enrolment where edition_id=$1 and withdrawn_at is null', [ed.id]),
+        q(`select count(*)::int n from chain_link where edition_id=$1 and state='pending'`, [ed.id]),
       ]);
       desk(res, 'Editor’s desk', `<h1>Editor’s desk</h1>
         <ul class="stats">
           <li><a href="/editor/readers"><strong>${readers.rows[0].n}</strong> readers</a></li>
           <li><a href="/editor/contributions"><strong>${pend.rows[0].n}</strong> contributions to review</a></li>
           <li><a href="/editor/letters#notes"><strong>${notes.rows[0].n}</strong> private notes to check</a></li>
+          <li><a href="/editor/chain"><strong>${chainPend.rows[0].n}</strong> paper chain links to check before door 23</a></li>
           <li><a href="/editor/letters#coverage"><strong>${cov.length}</strong> readers still need a letter</a></li>
           <li><a href="/editor/pouch"><strong>${enr.rows[0].n}</strong> in the Pouch${ed.drawn_at ? ' · drawn' : ''}</a></li>
         </ul>
@@ -212,12 +214,12 @@ function mount(app) {
       const pending = (await q(`select i.*, r.name rname, a.name aname from personal_item i join reader r on r.id=i.recipient_id left join reader a on a.id=i.author_id
           where i.edition_id=$1 and i.status='pending' order by i.created_at`, [ed.id])).rows;
       const letters = (await q(`select i.*, r.name rname from personal_item i join reader r on r.id=i.recipient_id
-          where i.edition_id=$1 and i.status='approved' order by r.name, i.day`, [ed.id])).rows;
+          where i.edition_id=$1 and i.status='approved' and i.kind='letter' order by r.name, i.day`, [ed.id])).rows;
       desk(res, 'Letters', `<h1>Letters</h1>
         <section id="coverage"><h2>Still need a letter (${cov.length})</h2>${cov.length ? `<p>${cov.map(c => esc(c.name)).join(', ')}</p>` : '<p>Everyone has post. Lovely.</p>'}</section>
         <section id="notes"><h2>Private notes waiting for a check (${pending.length})</h2>
-        <p class="small">Sent through door 14. They go to the recipient only after you approve them.</p>
-        ${pending.map(i => `<div class="card"><p class="small">To <strong>${esc(i.rname)}</strong> from ${esc(i.aname || 'someone')} · signed “${esc(i.byline)}” · door ${i.day}</p>${paras(i.body)}
+        <p class="small">Thank-yous from door 14, and gold stars with a personal note. They go to the recipient only after you approve them.</p>
+        ${pending.map(i => `<div class="card"><p class="small">To <strong>${esc(i.rname)}</strong> from ${esc(i.aname || 'someone')} · ${i.kind === 'star' ? 'gold star' : `signed “${esc(i.byline)}”`} · door ${i.day}</p>${paras(i.body)}
           <form method="post" action="/editor/letters/${i.id}/review" class="inline">${hidden(req.csrf)}<button class="btn small primary" name="act" value="approve">Deliver</button> <button class="btn small" name="act" value="decline">Hold back</button></form></div>`).join('')}</section>
         <section><h2>Add a letter</h2>
         <form method="post" action="/editor/letters">${hidden(req.csrf)}
@@ -321,6 +323,33 @@ function mount(app) {
         if (d >= 1 && d <= 24) await q(`update contribution set display_day=$3 where id=$1 and edition_id=$2 and consent`, [id, ed, d]);
       }
       res.redirect(303, '/editor/contributions');
+    } catch (e) { next(e); }
+  });
+
+  // ---------- Paper chain ----------
+  // Links count towards the masthead straight away; their words are only printed on door 23, once approved.
+  app.get('/editor/chain', async (req, res, next) => {
+    try {
+      const rows = (await q(`select * from chain_link where edition_id=$1 order by case state when 'pending' then 0 when 'approved' then 1 else 2 end, created_at`, [req.edition.id])).rows;
+      const pend = rows.filter(r => r.state === 'pending').length;
+      desk(res, 'Paper chain', `<h1>Paper chain</h1>
+        <p class="small">Every link lengthens the masthead chain straight away. The words only appear on door 23, without names, and only once you’ve approved them.</p>
+        ${pend ? `<form method="post" action="/editor/chain/approve-all">${hidden(req.csrf)}<button class="btn primary">Approve all ${pend} pending</button></form>` : ''}
+        <table class="tbl"><thead><tr><th>Desk</th><th>Link</th><th>State</th><th></th></tr></thead><tbody>
+        ${rows.map(r => `<tr><td>${esc(T.zoneLabel(r.zone))}</td><td>${esc(r.body)}</td><td>${r.state}</td><td>
+          <form method="post" action="/editor/chain/${r.id}" class="inline">${hidden(req.csrf)}${r.state !== 'approved' ? '<button class="btn small" name="act" value="approve">Approve</button>' : ''} ${r.state !== 'hidden' ? '<button class="linkish" name="act" value="hide">Hide</button>' : ''}</form></td></tr>`).join('')}
+        </tbody></table>`);
+    } catch (e) { next(e); }
+  });
+  app.post('/editor/chain/approve-all', async (req, res, next) => {
+    try { await q(`update chain_link set state='approved' where edition_id=$1 and state='pending'`, [req.edition.id]); res.redirect(303, '/editor/chain'); }
+    catch (e) { next(e); }
+  });
+  app.post('/editor/chain/:id', async (req, res, next) => {
+    try {
+      const st = req.body.act === 'approve' ? 'approved' : 'hidden';
+      await q('update chain_link set state=$3 where id=$1 and edition_id=$2', [Number(req.params.id) || 0, req.edition.id, st]);
+      res.redirect(303, '/editor/chain');
     } catch (e) { next(e); }
   });
 

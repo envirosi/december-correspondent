@@ -53,16 +53,17 @@ const smallStar = cls => `<svg class="${cls}" viewBox="-14 -14 28 28" aria-hidde
 
 const hidden = csrf => `<input type="hidden" name="_csrf" value="${esc(csrf)}">`;
 
-function masthead(now) {
+function masthead(now, chain) {
   const clocks = T.ZONES.map(z => `<span class="desk"><span class="desk-name">${z.label}</span> <time>${T.fmtTime(now, z.key)}</time></span>`).join('<span class="dot" aria-hidden="true">·</span>');
   return `<header class="masthead">${lights()}
     <a class="title" href="/">${smallStar('tstar')}<span><span class="the">The</span> December Correspondent</span>${smallStar('tstar')}</a>
     <p class="strap">ETN Christmas edition · December 2026</p>
     <p class="desks" aria-label="Local times at our three desks">${clocks}</p>
+    ${chain || ''}
   </header>`;
 }
 
-function layout({ title, body, reader, now, csrf, banner }) {
+function layout({ title, body, reader, now, csrf, banner, chain }) {
   const nav = reader ? `<nav class="nav" aria-label="Main">
       <a href="/">Front page</a>
       <a href="/pigeonhole" class="pigeonhole-link"><span class="handle" aria-hidden="true"></span>My pigeonhole</a>
@@ -78,7 +79,7 @@ function layout({ title, body, reader, now, csrf, banner }) {
 </head><body>
 <a class="skip" href="#main">Skip to content</a>
 ${banner ? `<div class="banner" role="status">${banner}</div>` : ''}
-${masthead(now || new Date())}
+${masthead(now || new Date(), chain)}
 ${nav}
 ${garland('top')}
 <main id="main" tabindex="-1">${body}</main>
