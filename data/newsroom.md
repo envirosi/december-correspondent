@@ -3,26 +3,34 @@
 ## Invitation email
 **Subject — A small December publication of doubtful financial standing**
 
-Dear friends,
+Dear all,
 
-On Tuesday we open The December Correspondent, a little Christmas paper with desks in the UK, Cebu and Sydney. Each morning there’ll be a door on the front page and another in your own pigeonhole. Your personal invitation is below. Please keep it to yourself, on the off chance somebody sends you something affectionate and ruins your reputation.
+On Tuesday 1 December we launch The December Correspondent: a small, silly Christmas paper with desks in the UK, Cebu and Sydney.
+
+Every morning at 07:00 your time, two doors open: one on the front page for everyone, and one in your own pigeonhole, just for you. Sydney gets the first look, which seems only fair.
+
+Your personal link is below. It’s yours alone, so please keep it to yourself, on the off chance somebody sends you something affectionate and ruins your reputation.
 
 [Personal invitation link]
 
-There’s no password and nothing to install. Open the link on the device you’ll read on and press the button. A one-minute guide is waiting on the other side.
+No password and nothing to install. Open it on the device you’ll read on and press the button. A one-minute guide is waiting on the other side. If you’d like the paper on your phone as well, just ask me for a second link.
 
-Read when you fancy. Miss a week and the back issues will still be there. If a caption occurs to you, send it in. If all that occurs to you is tea, that’s a perfectly sound editorial decision.
+What’s inside:
+- A door a day, plus your own pigeonhole, where post occasionally turns up.
+- An ongoing investigation. Something has gone missing. I am leading the enquiry personally, so please don’t worry.
+- The Diplomatic Pouch, a voluntary Secret Santa. The budget is zero, and Finance have been most particular on this point: a song, a GIF or a few kind words make a perfect gift. Join by Tuesday 8 December (09:00 UK, 17:00 Cebu, 20:00 Sydney).
+- The odd one-minute extra: crackers to pull with colleagues, gold stars to hand out, a paper chain, and some extremely important polls about mince pies.
+- A Christmas request box on 14 December. Your favourite Christmas song goes in; a team playlist comes out on Christmas Eve.
 
-There is also, I’m sorry to report, an ongoing investigation. Something has gone missing. I am leading the enquiry personally, so please don’t worry.
+Everything is optional. Read when you fancy, and if you miss a week the back issues will still be there. Nobody keeps score, and nobody can see who has read what. If all that occurs to you is tea, that’s a perfectly sound editorial decision.
 
-Inside there’s also a voluntary Secret Santa. A song, a GIF or a handwritten recipe counts. The spending limit is zero and Finance have been most particular on this point.
-
-The paper closes on 31 January. After that everything in it, letters included, is deleted, so anything you write here won’t follow you into 2027.
+The paper closes on 31 January. After that everything in it, letters included, is deleted, so nothing you write here follows you into 2027.
 
 Would whoever last saw the biscuit tin please get in touch.
 
 Back to the studio,
-Si — Junior Tree Correspondent at ETN
+Si
+Junior Tree Correspondent, ETN
 
 ## Quiet request for a personal letter
 I’m putting a little post behind one of [name]’s December doors. Can you think of a particular moment this year when they made something easier, kinder or funnier for you? One or two sentences in your own words would be lovely. Please say how you’d like to sign it. It goes privately to [name]. I’ll ask again if we ever want to print it.
