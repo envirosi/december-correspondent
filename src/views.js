@@ -53,11 +53,20 @@ const smallStar = cls => `<svg class="${cls}" viewBox="-14 -14 28 28" aria-hidde
 
 const hidden = csrf => `<input type="hidden" name="_csrf" value="${esc(csrf)}">`;
 
-function masthead(now, chain) {
+// Bisaya greetings from Si's checked reference, chosen by the reader's local time.
+function greeting(now, reader) {
+  if (!reader) return '';
+  const h = T.parts(now, reader.zone).h;
+  const [ceb, en] = h >= 5 && h < 12 ? ['Maayong buntag', 'Good morning'] : h >= 12 && h < 18 ? ['Maayong hapon', 'Good afternoon'] : ['Maayong gabii', 'Good evening'];
+  return `<p class="greet"><span lang="ceb">${ceb}</span>, ${esc(reader.name.split(' ')[0])} <span class="gloss">(${en})</span></p>`;
+}
+
+function masthead(now, chain, reader) {
   const clocks = T.ZONES.map(z => `<span class="desk"><span class="desk-name">${z.label}</span> <time>${T.fmtTime(now, z.key)}</time></span>`).join('<span class="dot" aria-hidden="true">·</span>');
   return `<header class="masthead">${lights()}
     <a class="title" href="/">${smallStar('tstar')}<span><span class="the">The</span> December Correspondent</span>${smallStar('tstar')}</a>
     <p class="strap">ETN Christmas edition · December 2026</p>
+    ${greeting(now, reader)}
     <p class="desks" aria-label="Local times at our three desks">${clocks}</p>
     ${chain || ''}
   </header>`;
@@ -79,7 +88,7 @@ function layout({ title, body, reader, now, csrf, banner, chain }) {
 </head><body>
 <a class="skip" href="#main">Skip to content</a>
 ${banner ? `<div class="banner" role="status">${banner}</div>` : ''}
-${masthead(now || new Date(), chain)}
+${masthead(now || new Date(), chain, reader)}
 ${nav}
 ${garland('top')}
 <main id="main" tabindex="-1">${body}</main>

@@ -272,3 +272,9 @@ body { background-color: var(--ivory);
 .joke-q { font-weight: 600; margin-bottom: .2rem; }
 .joke summary { font-size: .95rem; }
 .joke p { font-style: italic; margin: .3rem 0 0; }
+
+.greet { margin: .1rem 0 .4rem; font-family: var(--sans); font-size: .95rem; color: var(--brass-light); }
+.greet [lang="ceb"] { font-style: italic; color: #fff0c2; }
+.gloss { font-size: .85em; opacity: .85; }
+.bisaya { font-family: var(--sans); font-weight: 600; color: #8a5e0d; margin-top: .4rem; }
+.bisaya .gloss { font-weight: 400; color: var(--muted); }

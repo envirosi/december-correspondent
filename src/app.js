@@ -184,7 +184,7 @@ function createApp() {
     const item = (h, p) => `<li>${star}<h2>${h}</h2><p>${p}</p></li>`;
     res.page('How the paper works', `<section class="lead">
       <p class="kicker">${first ? `Welcome to the ${esc(T.zoneLabel(zone))} desk` : 'How the paper works'}</p>
-      <h1>${first ? `Hello, ${esc(req.reader.name.split(' ')[0])}` : 'The short version'}</h1>
+      <h1>${first ? (zone === 'Asia/Manila' ? `<span lang="ceb">Maayong adlaw</span>, ${esc(req.reader.name.split(' ')[0])}!` : `Hello, ${esc(req.reader.name.split(' ')[0])}`) : 'The short version'}</h1>
       <p class="standfirst">Whether you’re reading this in a jumper, in shorts or somewhere in between, here’s the whole thing in under a minute.</p></section>
       <ol class="how">
         ${item('Two doors every morning', `At 07:00 your time, a door opens on the front page for everyone, and another opens in <strong>your pigeonhole</strong>, just for you. ${started ? 'Some are already open.' : `The first ones open on ${esc(T.fmtFull(firstDoor, zone))}.`}`)}
@@ -296,7 +296,7 @@ function createApp() {
       const letters = ['letter', 'cracker', 'star'].map(k => {
         const mine = items.filter(i => i.kind === k);
         if (!mine.length) return '';
-        return `<section class="envelope env-${k}"><h2>${KIND[k]}</h2>${mine.map(i => `<div class="letter ${k}">${k === 'letter' ? `<a class="small" href="/post/${i.id}">Open on its own</a>` : ''}${k === 'cracker' ? crackerHtml(i.body) : paras(i.body)}${mediaLink(i.url)}${k === 'letter' ? `<p class="sig">${esc(i.byline)}</p>` : ''}</div>`).join('')}</section>`;
+        return `<section class="envelope env-${k}"><h2>${KIND[k]}</h2>${mine.map(i => `<div class="letter ${k}">${k === 'letter' ? `<a class="small" href="/post/${i.id}">Open on its own</a>` : ''}${k === 'cracker' ? crackerHtml(i.body) : paras(i.body)}${k === 'star' ? '<p class="bisaya"><span lang="ceb">Maayo kaayo!</span> <span class="gloss">(Well done!)</span></p>' : ''}${mediaLink(i.url)}${k === 'letter' ? `<p class="sig">${esc(i.byline)}</p>` : ''}</div>`).join('')}</section>`;
       }).join('');
       const gifts = parcels.length ? `<section class="envelope parcel"><h2>From the Diplomatic Pouch</h2>${parcels.map(p => parcelHtml(p, req.csrf)).join('')}</section>` : '';
       res.page(door.private_title, `<article class="story private">

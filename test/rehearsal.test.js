@@ -328,7 +328,7 @@ test('nudges: polls, crackers, gold stars, hats, offline, paper chain', async ()
   assert.doesNotMatch((await req('/door/9', { who: P.bea, at: d9 })).text, /name="note"/);
   await post(P.bea, '/nudge/9/star', { to: String(P.cal.id), reason: '2', note: 'ignored' }, d9);
   const cal9 = (await req('/pigeonhole/9', { who: P.cal, at: d9 })).text;
-  assert.match(cal9, /Gold stars[\s\S]*Saved my bacon/);
+  assert.match(cal9, /Gold stars[\s\S]*Saved my bacon[\s\S]*Maayo kaayo!/);
   assert.doesNotMatch(cal9, /ignored/);
 
   // Offline nudge and hat parade.
@@ -360,6 +360,16 @@ test('team import: spreadsheet paste, typed lines, add one, editor never demoted
   assert.equal((await q(`select count(*)::int n from reader where email like '%@import.test' and email <> 'jo@import.test' and email <> 'maria@import.test'`)).rows[0].n, 0, 'nothing saved when a line is wrong');
   await post(P.ed, '/editor/readers/add', { name: 'Kai Reyes', email: 'kai@import.test', zone: 'Sydney' });
   assert.equal((await q(`select zone from reader where email='kai@import.test'`)).rows[0].zone, 'Australia/Sydney');
+});
+
+test('Bisaya touches: greeting by local time, Cebu welcome, gold star, case, door 24', async () => {
+  assert.match((await req('/', { who: P.ada, at: '2026-12-02T08:00:00Z' })).text, /lang="ceb">Maayong buntag<\/span>, Ada/);
+  assert.match((await req('/', { who: P.ada, at: '2026-12-02T14:00:00Z' })).text, /Maayong hapon/);
+  assert.match((await req('/', { who: P.cal, at: '2026-12-02T14:00:00Z' })).text, /Maayong gabii<\/span>, Cal/);   // 01:00 in Sydney
+  assert.match((await req('/how?first=1', { who: P.bea, at: '2026-12-02T03:00:00Z' })).text, /Maayong adlaw<\/span>, Bea!/);
+  assert.match((await req('/how?first=1', { who: P.ada, at: '2026-12-02T09:00:00Z' })).text, /Hello, Ada/);
+  assert.match((await req('/door/21', { who: P.ada, at: '2026-12-21T12:00:00Z' })).text, /Ayaw kabalaka\. Lift the laptop/);
+  assert.match((await req('/door/24', { who: P.ada, at: '2026-12-24T12:00:00Z' })).text, /Daghang salamat\. Amping!/);
 });
 
 test('personal pages are never cached', async () => {
