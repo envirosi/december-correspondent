@@ -85,10 +85,10 @@ function mount(app) {
   app.get('/editor/readers', async (req, res, next) => {
     try {
       const rows = await readersOf(req.edition);
-      desk(res, 'Readers', `<h1>Readers &amp; invitations</h1>${req.query.imported ? `<p class="flash" role="status">Added ${Number(req.query.imported) || 0}. Nobody has been invited yet.</p>` : ''}
+      desk(res, 'Readers', `<h1>Readers &amp; invitations</h1>${req.query.imported ? `<p class="flash" role="status">Added ${Number(req.query.imported) || 0}. Nobody has been invited yet.</p>` : ''}${req.query.updated ? '<p class="flash" role="status">Saved.</p>' : ''}${req.query.removed ? '<p class="flash" role="status">Removed.</p>' : ''}
         <table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Desk</th><th>Role</th><th>Invitation</th></tr></thead><tbody>
         ${rows.map(r => `<tr${r.active ? '' : ' class="muted"'}><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${esc(T.zoneLabel(r.zone))}</td><td>${esc(r.role)}</td>
-          <td><form method="post" action="/editor/readers/${r.id}/invite" class="inline">${hidden(req.csrf)}<button class="btn small">New link</button></form>
+          <td><a class="btn small" href="/editor/readers/${r.id}/edit">Edit</a> <form method="post" action="/editor/readers/${r.id}/invite" class="inline">${hidden(req.csrf)}<button class="btn small">New link</button></form>
           <form method="post" action="/editor/readers/${r.id}/revoke" class="inline">${hidden(req.csrf)}<button class="linkish">Sign out everywhere</button></form></td></tr>`).join('')}
         </tbody></table>
         <p class="small">A new link replaces any unused one and leaves existing devices signed in. “Sign out everywhere” ends all sessions and unused links.</p>
@@ -137,6 +137,58 @@ function mount(app) {
   });
 
   const readerById = async (req, id) => (await q('select * from reader where id=$1 and edition_id=$2', [Number(id) || 0, req.edition.id])).rows[0];
+
+  // ---------- Edit or remove a reader ----------
+  app.get('/editor/readers/:id/edit', async (req, res, next) => {
+    try {
+      const r = await readerById(req, req.params.id);
+      if (!r) return res.status(404).end();
+      const n = (await q(`select count(*)::int n from personal_item where recipient_id=$1`, [r.id])).rows[0].n;
+      desk(res, `Edit ${r.name}`, `<h1>Edit ${esc(r.name)}</h1>
+        ${req.query.err ? `<p class="flash err">${esc(req.query.err)}</p>` : ''}
+        <form method="post" action="/editor/readers/${r.id}/edit">${hidden(req.csrf)}
+          <label for="e-n">Name</label><input id="e-n" name="name" value="${esc(r.name)}" required>
+          <label for="e-e">Work email</label><input id="e-e" name="email" type="email" value="${esc(r.email)}" required>
+          <label for="e-z">Desk</label><select id="e-z" name="zone">${T.ZONES.map(z => `<option value="${z.label}"${z.key === r.zone ? ' selected' : ''}>${z.label}</option>`).join('')}</select>
+          <button class="btn primary">Save changes</button> <a href="/editor/readers">Cancel</a></form>
+        <p class="small">Letters you’ve written for ${esc(r.name.split(' ')[0])} stay with them${n ? ` (${n} so far)` : ''}. If you’ve already sent them a link, it still works.</p>
+        ${r.id === req.reader.id ? '' : `<h2>Remove ${esc(r.name)}</h2>
+        <p>Only if they were added by mistake, for example twice. This deletes their pigeonhole and everything in it${n ? `, including ${n} letter${n === 1 ? '' : 's'}` : ''}, and their link stops working.</p>
+        <a class="btn" href="/editor/readers/${r.id}/remove">Remove…</a>`}`);
+    } catch (e) { next(e); }
+  });
+
+  app.post('/editor/readers/:id/edit', async (req, res, next) => {
+    try {
+      const r = await readerById(req, req.params.id);
+      if (!r) return res.status(404).end();
+      const [c] = ROSTER.check([{ row: 1, name: String(req.body.name || '').trim(), email: String(req.body.email || '').trim().toLowerCase(), zoneRaw: String(req.body.zone || ''), zone: T.zoneFrom(req.body.zone), role: null }]);
+      if (c.err) return res.redirect(303, `/editor/readers/${r.id}/edit?err=${encodeURIComponent(c.err)}`);
+      const clash = (await q('select name from reader where edition_id=$1 and email=$2 and id<>$3', [req.edition.id, c.email, r.id])).rows[0];
+      if (clash) return res.redirect(303, `/editor/readers/${r.id}/edit?err=${encodeURIComponent(`${clash.name} already has that email. If that's a duplicate of this person, remove one of them first.`)}`);
+      await q('update reader set name=$2, email=$3, zone=$4 where id=$1', [r.id, c.name, c.email, c.zone]);
+      res.redirect(303, '/editor/readers?updated=1');
+    } catch (e) { next(e); }
+  });
+
+  app.get('/editor/readers/:id/remove', async (req, res, next) => {
+    try {
+      const r = await readerById(req, req.params.id);
+      if (!r || r.id === req.reader.id) return res.status(404).end();
+      desk(res, 'Remove reader', `<h1>Remove ${esc(r.name)} (${esc(r.email)})?</h1>
+        <p>This can’t be undone. Their pigeonhole, letters, crackers and stars sent to them, and their link are all deleted.</p>
+        <form method="post" action="/editor/readers/${r.id}/remove">${hidden(req.csrf)}<button class="btn primary">Yes, remove ${esc(r.name.split(' ')[0])}</button> <a href="/editor/readers/${r.id}/edit">Keep them</a></form>`);
+    } catch (e) { next(e); }
+  });
+
+  app.post('/editor/readers/:id/remove', async (req, res, next) => {
+    try {
+      const r = await readerById(req, req.params.id);
+      if (!r || r.id === req.reader.id) return res.status(404).end();
+      await q('delete from reader where id=$1', [r.id]);
+      res.redirect(303, '/editor/readers?removed=1');
+    } catch (e) { next(e); }
+  });
 
   app.post('/editor/readers/:id/invite', async (req, res, next) => {
     try {

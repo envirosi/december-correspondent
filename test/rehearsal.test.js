@@ -372,6 +372,22 @@ test('Bisaya touches: greeting by local time, Cebu welcome, gold star, case, doo
   assert.match((await req('/door/24', { who: P.ada, at: '2026-12-24T12:00:00Z' })).text, /Daghang salamat\. Amping!/);
 });
 
+test('editor can correct a reader’s email (letters stay) and remove a duplicate', async () => {
+  const josh = await upsertReader(ed, { name: 'Josh', email: 'josh@wrong.test', zone: 'Europe/London' });
+  await q(`insert into personal_item(edition_id, recipient_id, day, body, byline) values ($1,$2,2,'Note for Josh','Si')`, [ed.id, josh.id]);
+  const dup = await upsertReader(ed, { name: 'Josh again', email: 'josh@right.test', zone: 'Europe/London' });
+  const clash = await post(P.ed, `/editor/readers/${josh.id}/edit`, { name: 'Josh', email: 'josh@right.test', zone: 'UK' });
+  assert.match(decodeURIComponent(clash.headers.get('location')), /already has that email/);
+  await post(P.ed, `/editor/readers/${dup.id}/remove`, {});
+  await post(P.ed, `/editor/readers/${josh.id}/edit`, { name: 'Josh Holly', email: 'Josh@Right.test', zone: 'Cebu' });
+  const r = (await q('select name, email, zone from reader where id=$1', [josh.id])).rows[0];
+  assert.deepEqual([r.name, r.email, r.zone], ['Josh Holly', 'josh@right.test', 'Asia/Manila']);
+  assert.equal((await q('select count(*)::int n from personal_item where recipient_id=$1', [josh.id])).rows[0].n, 1);
+  assert.equal((await q('select count(*)::int n from reader where id=$1', [dup.id])).rows[0].n, 0);
+  assert.equal((await post(P.ed, `/editor/readers/${P.ed.id}/remove`, {})).status, 404, 'cannot remove yourself');
+  assert.equal((await post(P.ada, `/editor/readers/${josh.id}/edit`, { name: 'x', email: 'x@x.test', zone: 'UK' })).status, 404, 'readers cannot edit');
+});
+
 test('personal pages are never cached', async () => {
   const r = await req('/pigeonhole', { who: P.ada });
   assert.match(r.headers.get('cache-control'), /no-store/);
