@@ -25,6 +25,6 @@ Use Europe/London, Asia/Manila and Australia/Sydney. Release both doors at 07:00
 
 ## Agreed changes (26 November)
 - Relay doors (3, 17, 21): a consented contribution publishes immediately so the next desk can pick it up. The editor can unpublish.
-- Day 14 private letters go to the editor for a check before they reach the recipient's pigeonhole. They stay out of the public moderation feed.
-- Delivery is staged: doors and Pouch enrolment by 1 Dec, draw and parcels by 8 Dec, day-14 letters by 14 Dec, gift delivery by 18 Dec.
+- Day 14 private letters were removed (27 November): a note routed through the editor isn't private. Crackers and gold stars (preset reasons, no free text) cover thank-yous and go straight to the recipient. Door 14 is now the Christmas request box; the editor turns the requests into a playlist linked on door 24.
+- Delivery is staged: doors and Pouch enrolment by 1 Dec, draw and parcels by 8 Dec, song request box by 14 Dec, gift delivery by 18 Dec.
 - Retention: the paper closes on 31 January 2027 and a purge command deletes all personal data.

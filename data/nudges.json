@@ -61,6 +61,12 @@
       "body": "Wear a paper hat on a call today. A cracker hat, a newspaper hat or one folded from a work document all count. Then press the button and your name joins the hat parade below."
     },
     {
+      "day": 14,
+      "kind": "song",
+      "title": "The Christmas request box",
+      "body": "What’s your favourite Christmas song? Drop it in the request box. The editor will turn every request into one playlist and hand it back on door 24, so the whole team gets a soundtrack for the holidays. Any language, any decade, any level of embarrassment."
+    },
+    {
       "day": 15,
       "kind": "poll",
       "title": "The Great Desk Debate",

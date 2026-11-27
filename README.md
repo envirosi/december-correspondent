@@ -21,7 +21,7 @@ node src/cli.js purge --yes         # 31 January: delete all personal data
 Go to **Editor's desk** on the site. From there you can:
 - import readers by pasting the contents of `team.csv`, and issue each person their own invitation link
 - add letters one at a time, or paste in `letters.csv`
-- check private notes sent through door 14 before they're delivered
+- collect Christmas song requests (door 14 to 22) and paste the playlist link for door 24
 - review contributions (relay lines on doors 3, 17 and 21 publish straight away; you can unpublish them)
 - draw names after 09:00 UTC on 8 December
 - add reserve parcels for anyone whose giver drops out

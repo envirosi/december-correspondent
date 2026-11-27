@@ -139,15 +139,24 @@ test('contributed text is escaped and only https links accepted', async () => {
   assert.doesNotMatch(page, /<script>alert/);
 });
 
-test('day 14 letters wait for the editor', async () => {
+test('door 14 is a song request box, and the playlist appears on door 24', async () => {
   const at = '2026-12-14T12:00:00Z';
-  await post(P.bea, '/door/14/letter', { recipient: String(P.cal.id), body: 'You always tell me which attachment to open.', sig: 'anon' }, at);
-  assert.doesNotMatch((await req('/pigeonhole/14', { who: P.cal, at })).text, /attachment to open/);
-  assert.doesNotMatch((await req('/editor/contributions', { who: P.ed, at })).text, /attachment to open/, 'not in public moderation feed');
-  const i = (await q(`select id from personal_item where body like 'You always%'`)).rows[0];
-  await post(P.ed, `/editor/letters/${i.id}/review`, { act: 'approve' }, at);
-  const page = (await req('/pigeonhole/14', { who: P.cal, at })).text;
-  assert.match(page, /attachment to open[\s\S]*A colleague/);
+  const door = (await req('/door/14', { who: P.cal, at })).text;
+  assert.match(door, /Christmas request box/);
+  assert.doesNotMatch(door, /thank-you|Who is it for/);
+  assert.equal((await req('/door/14/letter', { who: P.bea, at, method: 'POST', form: {} })).status, 403);
+  await post(P.cal, '/nudge/14/song', { title: 'Song Number One', artist: 'Someone Festive' }, at);
+  await post(P.cal, '/nudge/14/song', { title: 'Actually This One' }, at);
+  await post(P.bea, '/nudge/14/song', { title: 'A Cebu Favourite', artist: 'A Choir' }, at);
+  assert.match((await req('/door/14', { who: P.cal, at })).text, /Your request:<\/strong> Actually This One[\s\S]*2 songs in the box/);
+  const desk = (await req('/editor/songs', { who: P.ed, at })).text;
+  assert.match(desk, /Actually This One[\s\S]*A Cebu Favourite — A Choir|A Cebu Favourite — A Choir[\s\S]*Actually This One/);
+  assert.doesNotMatch(desk, /Cal \(Sydney\)|Bea \(Cebu\)/, 'no names on the songs page');
+  assert.equal((await post(P.bea, '/nudge/14/song', { title: 'Too late' }, '2026-12-23T12:00:00Z')).status, 303);
+  assert.doesNotMatch((await req('/editor/songs', { who: P.ed, at })).text, /Too late/);
+  await post(P.ed, '/editor/songs/playlist', { url: 'https://music.example.com/xmas' }, at);
+  assert.doesNotMatch((await req('/door/23', { who: P.ada, at: '2026-12-23T12:00:00Z' })).text, /music\.example\.com/);
+  assert.match((await req('/door/24', { who: P.ada, at: '2026-12-24T12:00:00Z' })).text, /The December Correspondent playlist[\s\S]*music\.example\.com/);
 });
 
 test('draw: 0, 1, 2 and 5 entrants, concurrent presses, no self-match', async () => {
@@ -313,15 +322,13 @@ test('nudges: polls, crackers, gold stars, hats, offline, paper chain', async ()
   assert.doesNotMatch(self.headers.get('location'), /nudged=cracker/);
   assert.equal((await post(P.ada, '/nudge/5/cracker', { to: String(P.bea.id) }, '2026-12-05T12:00:00Z')).status, 404, 'no cracker on door 5');
 
-  // Gold stars on door 9: plain ones arrive at once; notes wait for the editor.
+  // Gold stars on door 9: preset reasons only, delivered straight to the recipient.
   const d9 = '2026-12-09T12:00:00Z';
-  await post(P.bea, '/nudge/9/star', { to: String(P.cal.id), reason: '2' }, d9);
-  await post(P.bea, '/nudge/9/star', { to: String(P.ada.id), reason: '1', note: 'The spreadsheet thing. Hero.' }, d9);
-  assert.match((await req('/pigeonhole/9', { who: P.cal, at: d9 })).text, /Gold stars[\s\S]*Saved my bacon/);
-  assert.doesNotMatch((await req('/pigeonhole/9', { who: P.ada, at: d9 })).text, /Hero/);
-  const pend = (await q(`select id from personal_item where body like '%Hero%'`)).rows[0];
-  await post(P.ed, `/editor/letters/${pend.id}/review`, { act: 'approve' }, d9);
-  assert.match((await req('/pigeonhole/9', { who: P.ada, at: d9 })).text, /Made me laugh[\s\S]*Hero/);
+  assert.doesNotMatch((await req('/door/9', { who: P.bea, at: d9 })).text, /name="note"/);
+  await post(P.bea, '/nudge/9/star', { to: String(P.cal.id), reason: '2', note: 'ignored' }, d9);
+  const cal9 = (await req('/pigeonhole/9', { who: P.cal, at: d9 })).text;
+  assert.match(cal9, /Gold stars[\s\S]*Saved my bacon/);
+  assert.doesNotMatch(cal9, /ignored/);
 
   // Offline nudge and hat parade.
   assert.match((await req('/door/10', { who: P.ada, at: '2026-12-10T12:00:00Z' })).text, /No button today/);

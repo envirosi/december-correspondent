@@ -9,7 +9,6 @@ const CASE = require('./casefile');
 const NUDGE = require('./nudges');
 
 const RELAY_DAYS = new Set([3, 17, 21]);
-const LETTER_DAY = 14;
 const PREVIEW_COOKIE = 'dc_preview';
 const readCookie = (req, name) => { const m = (req.headers.cookie || '').match(new RegExp('(?:^|; )' + name + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : null; };
 
@@ -189,7 +188,8 @@ function createApp() {
         ${item('Something has gone missing', 'Every door carries the latest instalment of <strong>The Case</strong>. There’s an evidence board if you’d like to play detective. The investigating officer is not, it’s fair to say, a natural.')}
         ${item('Join in, or don’t', 'Some doors invite a line, a photo link or a song. Everything is optional. Nobody keeps score, there are no streaks, and nobody can see who has read what.')}
         ${item('The Diplomatic Pouch', `An optional Secret Santa with a budget of exactly zero: a few kind words and a link to something free, like a song or a GIF. ${pouchOpen ? `Join by ${esc(T.fmtFull(ed.enrol_close, zone))}, your time.` : 'Gifts arrive in pigeonholes on 18 December.'}`)}
-        ${item('Post for you', 'Now and then your pigeonhole will have a letter in it. On door 14 you can send a private thank-you to a colleague, too.')}
+        ${item('Post for you', 'Now and then your pigeonhole will have something in it: a letter, a cracker someone pulled with you, or a gold star. You can send crackers and stars too, on the days they appear.')}
+        ${item('The Christmas request box', 'On door 14, tell us your favourite Christmas song. On door 24 everyone gets a playlist made from every request.')}
         ${item('No catching up required', 'Miss a week? Every door you’ve opened stays open. The paper closes on 31 January, and then everything in it, letters included, is deleted.')}
       </ol>
       <p class="actions"><a class="btn primary" href="/">${first ? 'Open the paper' : 'Back to the front page'}</a></p>
@@ -206,25 +206,10 @@ function createApp() {
       const ed = req.edition;
       const door = await getDoor(ed, day);
       const contribs = (await q(`select * from contribution where edition_id=$1 and display_day=$2 and state='approved' order by created_at`, [ed.id, day])).rows;
-      const flash = req.query.sent ? `<p class="flash" role="status">${req.query.sent === 'relay' ? 'Filed. Your line is in the paper.' : req.query.sent === 'letter' ? 'Thank you. The editor will give it a quick read and pop it in their pigeonhole.' : 'Thank you. It’s with the editor.'}</p>` : '';
+      const flash = req.query.sent ? `<p class="flash" role="status">${req.query.sent === 'relay' ? 'Filed. Your line is in the paper.' : 'Thank you. It’s with the editor.'}</p>` : '';
       let prompt = '';
       if (day === 18) {
         prompt = `<aside class="prompt"><p>${esc(door.optional_prompt || '')}</p><p><a class="btn primary" href="/pigeonhole/18">Go to my pigeonhole</a></p></aside>`;
-      } else if (day === LETTER_DAY) {
-        const others = (await q('select id, name from reader where edition_id=$1 and active and id<>$2 order by name', [ed.id, req.reader.id])).rows;
-        prompt = `<aside class="prompt"><h2>Write a private thank-you</h2><p>${esc(door.optional_prompt || '')}</p>
-          <form method="post" action="/door/14/letter">${hidden(req.csrf)}
-            <label for="to">Who is it for?</label>
-            <select id="to" name="recipient" required><option value="">Choose a colleague</option>${others.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
-            <label for="lt">Your note</label>
-            <textarea id="lt" name="body" rows="5" maxlength="1200" required></textarea>
-            <fieldset><legend>How would you like to sign it?</legend>
-              <label class="choice"><input type="radio" name="sig" value="name" checked> ${esc(req.reader.name)}</label>
-              <label class="choice"><input type="radio" name="sig" value="anon"> A colleague</label>
-              <label class="choice"><input type="radio" name="sig" value="custom"> Something else: <input name="sig_custom" maxlength="60" aria-label="Custom signature"></label>
-            </fieldset>
-            <button class="btn primary">Send privately</button>
-          </form></aside>`;
       } else if (door.optional_prompt) {
         const relay = RELAY_DAYS.has(day);
         prompt = `<aside class="prompt"><h2>${relay ? 'The relay' : 'Letters to the editor'}</h2><p>${esc(door.optional_prompt)}</p>
@@ -251,6 +236,7 @@ function createApp() {
         ${await CASE.enquirySection(ed.id, day)}
         ${await NUDGE.card(req, day)}
         ${day === NUDGE.CHAIN_PRINT_DAY ? await NUDGE.chainPrint(ed.id) : ''}
+        ${day === 24 ? NUDGE.playlistSection(req.edition) : ''}
         ${prompt}${list}
         <nav class="pager" aria-label="Other doors">${day > 1 ? `<a href="/door/${day - 1}">← Door ${day - 1}</a>` : '<span></span>'}
         <a href="/pigeonhole/${day}">Your pigeonhole for today</a>
@@ -261,7 +247,7 @@ function createApp() {
   app.post('/door/:day/contribute', async (req, res, next) => {
     try {
       const day = parseDay(req.params.day);
-      if (!day || day > req.released || day === LETTER_DAY || day === 18) return res.status(404).end();
+      if (!day || day > req.released || day === 18) return res.status(404).end();
       const door = await getDoor(req.edition, day);
       if (!door.optional_prompt) return res.status(404).end();
       const body = String(req.body.body || '').trim().slice(0, 600);
@@ -277,22 +263,6 @@ function createApp() {
         [req.edition.id, req.reader.id, day, body, url, String(req.body.media_desc || '').trim().slice(0, 200) || null, consent, byline,
           relay ? 'approved' : 'pending', relay ? new Date() : null]);
       res.redirect(303, `/door/${day}?sent=${relay ? 'relay' : '1'}`);
-    } catch (e) { next(e); }
-  });
-
-  app.post('/door/14/letter', async (req, res, next) => {
-    try {
-      if (req.released < LETTER_DAY) return res.status(404).end();
-      const rid = Number(req.body.recipient);
-      const rec = (await q('select id from reader where id=$1 and edition_id=$2 and active and id<>$3', [rid, req.edition.id, req.reader.id])).rows[0];
-      const body = String(req.body.body || '').trim().slice(0, 1200);
-      if (!rec || !body) return res.redirect(303, '/door/14');
-      let byline = req.reader.name;
-      if (req.body.sig === 'anon') byline = 'A colleague';
-      if (req.body.sig === 'custom' && String(req.body.sig_custom || '').trim()) byline = String(req.body.sig_custom).trim().slice(0, 60);
-      await q(`insert into personal_item(edition_id, recipient_id, day, body, byline, author_id, status) values ($1,$2,$3,$4,$5,$6,'pending')`,
-        [req.edition.id, rec.id, Math.max(LETTER_DAY, req.released), body, byline, req.reader.id]);
-      res.redirect(303, '/door/14?sent=letter');
     } catch (e) { next(e); }
   });
 

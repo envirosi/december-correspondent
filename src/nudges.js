@@ -5,10 +5,11 @@ const path = require('path');
 const crypto = require('crypto');
 const { q, tx } = require('./db');
 const T = require('./time');
-const { esc, paras, hidden } = require('./views');
+const { esc, paras, hidden, safeHttpsUrl } = require('./views');
 
 const DATA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'nudges.json'), 'utf8'));
 const CHAIN_PRINT_DAY = 23;
+const SONG_CLOSE_DAY = 22;
 const PER_DAY_LIMIT = 3;
 
 async function seedNudges(edition) {
@@ -67,7 +68,7 @@ async function pollResults(editionId, day, options) {
 async function card(req, day) {
   const n = await getNudge(req.edition.id, day);
   if (!n) return '';
-  const flash = req.query.nudged ? `<p class="flash" role="status">${esc({ chain: 'Link added. Look up: the chain just got longer.', cracker: 'Bang! Cracker pulled. It’s waiting in their pigeonhole.', star: 'Gold star sent.', starcheck: 'Gold star sent. The editor will glance at your note, then deliver it.', hat: 'Splendid hat. You’re in the parade.', vote: 'Vote counted.', limit: 'That’s plenty for today. Save some for another door!' }[req.query.nudged] || '')}</p>` : '';
+  const flash = req.query.nudged ? `<p class="flash" role="status">${esc({ chain: 'Link added. Look up: the chain just got longer.', cracker: 'Bang! Cracker pulled. It’s waiting in their pigeonhole.', star: 'Gold star sent.', hat: 'Splendid hat. You’re in the parade.', song: 'Request received. See you on door 24.', vote: 'Vote counted.', limit: 'That’s plenty for today. Save some for another door!' }[req.query.nudged] || '')}</p>` : '';
   let inner = '';
   if (n.kind === 'chain') {
     inner = chainForm(req);
@@ -85,8 +86,18 @@ async function card(req, day) {
   } else if (n.kind === 'star') {
     inner = `<form method="post" action="/nudge/${day}/star">${hidden(req.csrf)}<label for="st-${day}">Gold star for</label>${pickList(await colleagues(req), `st-${day}`).replace(`name="st-${day}"`, 'name="to"')}
       <label for="sr-${day}">Because they…</label><select id="sr-${day}" name="reason" required>${DATA.star_reasons.map((r, i) => `<option value="${i}">${esc(r)}</option>`).join('')}</select>
-      <label for="sn-${day}">A few words of your own <span class="small">(optional; the editor gives these a quick look first)</span></label><input id="sn-${day}" name="note" maxlength="120">
       <button class="btn primary">Send the star</button></form>`;
+  } else if (n.kind === 'song') {
+    const mine = (await q('select title, artist from song_request where edition_id=$1 and reader_id=$2', [req.edition.id, req.reader.id])).rows[0];
+    const total = (await q('select count(*)::int n from song_request where edition_id=$1', [req.edition.id])).rows[0].n;
+    const open = req.released <= SONG_CLOSE_DAY;
+    const form = `<form method="post" action="/nudge/${day}/song">${hidden(req.csrf)}
+      <label for="sg-t">Song</label><input id="sg-t" name="title" maxlength="100" required value="${esc(mine ? mine.title : '')}">
+      <label for="sg-a">Who sings it <span class="small">(optional, but it helps the editor find the right version)</span></label><input id="sg-a" name="artist" maxlength="100" value="${esc(mine && mine.artist || '')}">
+      <button class="btn primary">${mine ? 'Change my request' : 'Drop it in the box'}</button></form>`;
+    inner = `${mine ? `<p><strong>Your request:</strong> ${esc(mine.title)}${mine.artist ? ` (${esc(mine.artist)})` : ''}</p>` : ''}
+      ${open ? (mine ? `<details><summary>Change my request</summary>${form}</details>` : form) : '<p>The request box is closed. The playlist arrives on door 24.</p>'}
+      <p class="small">${total} song${total === 1 ? '' : 's'} in the box so far. One request each; you can change yours until door 22.</p>`;
   } else if (n.kind === 'hat') {
     const hats = (await q(`select r.name, r.zone, h.reader_id from hat h join reader r on r.id=h.reader_id where h.edition_id=$1 and h.day=$2 order by h.created_at`, [req.edition.id, day])).rows;
     const mine = hats.some(h => h.reader_id === req.reader.id);
@@ -104,6 +115,15 @@ function chainForm(req) {
     <input id="cl" name="body" maxlength="80" required placeholder="e.g. Finally understood the new job system">
     <button class="btn primary">Add my link</button></form>
     <p class="small">No names are printed. Add as many links as you like.</p>`;
+}
+
+function playlistSection(edition) {
+  const url = safeHttpsUrl(edition.playlist_url);
+  if (!url) return '';
+  const host = new URL(url).hostname.replace(/^www\./, '');
+  return `<section class="nudge nudge-song" id="playlist"><p class="kicker">From the Christmas request box</p><h2>The December Correspondent playlist</h2>
+    <p>Every song you asked for, from all three desks, in one place. Merry Christmas.</p>
+    <p><a class="btn primary" href="${esc(url)}" rel="noopener noreferrer" target="_blank">Play the playlist <span class="host">(${esc(host)})</span><span class="visually-hidden"> opens in a new tab</span></a></p></section>`;
 }
 
 async function headline(editionId, day) {
@@ -174,13 +194,20 @@ function mount(app) {
           body = `${me.name} pulled a cracker with you. You won ${prize}, and the paper hat, obviously.\n\n${qn}\n${an}`;
         } else {
           const reason = DATA.star_reasons[Number(req.body.reason)] || DATA.star_reasons[0];
-          const note = String(req.body.note || '').trim().slice(0, 120);
-          body = `A gold star from ${me.name}: ${reason}.${note ? `\n\n“${note}”` : ''}`;
-          if (note) status = 'pending';
+          body = `A gold star from ${me.name}: ${reason}.`;
         }
         await q(`insert into personal_item(edition_id, recipient_id, day, body, byline, author_id, status, kind) values ($1,$2,$3,$4,$5,$6,$7,$8)`,
           [ed, to.id, Math.max(day, req.released), body, me.name, me.id, status, kind]);
-        return res.redirect(303, back(req, day, kind === 'star' && status === 'pending' ? 'starcheck' : kind));
+        return res.redirect(303, back(req, day, kind));
+      }
+      if (act === 'song' && n.kind === 'song') {
+        if (req.released > SONG_CLOSE_DAY) return res.redirect(303, `/door/${day}#nudge`);
+        const title = String(req.body.title || '').trim().slice(0, 100);
+        const artist = String(req.body.artist || '').trim().slice(0, 100) || null;
+        if (!title) return res.redirect(303, `/door/${day}#nudge`);
+        await q(`insert into song_request(edition_id, reader_id, zone, title, artist) values ($1,$2,$3,$4,$5)
+          on conflict (edition_id, reader_id) do update set title=excluded.title, artist=excluded.artist, zone=excluded.zone, updated_at=now()`, [ed, me.id, me.zone, title, artist]);
+        return res.redirect(303, back(req, day, 'song'));
       }
       if (act === 'hat' && n.kind === 'hat') {
         await q('insert into hat(edition_id, day, reader_id) values ($1,$2,$3) on conflict do nothing', [ed, day, me.id]);
@@ -191,4 +218,4 @@ function mount(app) {
   });
 }
 
-module.exports = { mount, card, headline, seedNudges, chainCounts, chainStrip, chainPrint, CHAIN_PRINT_DAY };
+module.exports = { mount, card, headline, seedNudges, chainCounts, chainStrip, chainPrint, playlistSection, CHAIN_PRINT_DAY };

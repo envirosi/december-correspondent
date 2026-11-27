@@ -42,7 +42,7 @@ I’m putting a little post behind one of [name]’s December doors. Can you thi
 - 8 December · Close enrolment at 09:00 UK / 17:00 Cebu / 20:00 Sydney. Editor runs the draw. Show assignments in each giver’s pouch.
 - 11 December · Check note coverage. If a note is missing, ask someone who knows the reader or write a genuine one yourself. Target day 14 for delivery. A later day also works.
 - 17–18 December · Check sealed parcels and prepare individual reserves. Open parcels on 18 December at 07:00 local time. People on leave can collect theirs later.
-- 14–16 December · Check private thank-you notes sent through door 14 and release them to their recipients.
+- 14–22 December · Christmas request box open on door 14. On 23 December, build the playlist from Editor’s desk → Songs and paste its link there so it appears on door 24.
 - 23–24 December · Select willing contributors’ moments for the final edition. Confirm quoted wording and permission. Publish the closing story even if there are no submissions.
 
 ## Editor’s voice

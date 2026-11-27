@@ -18,7 +18,7 @@ function mount(app) {
   });
   const desk = (res, title, body) => res.page(title, `<div class="desk-wrap"><nav class="subnav" aria-label="Editor’s desk">
       <a href="/editor">Overview</a><a href="/editor/readers">Readers &amp; invites</a><a href="/editor/doors">Doors</a>
-      <a href="/editor/letters">Letters</a><a href="/editor/contributions">Contributions</a><a href="/editor/chain">Paper chain</a><a href="/editor/pouch">Pouch</a></nav>${body}</div>`,
+      <a href="/editor/letters">Letters</a><a href="/editor/contributions">Contributions</a><a href="/editor/chain">Paper chain</a><a href="/editor/songs">Songs</a><a href="/editor/pouch">Pouch</a></nav>${body}</div>`,
     { banner: 'Editor’s desk · readers never see this page' });
   const readersOf = async ed => (await q('select * from reader where edition_id=$1 order by name', [ed.id])).rows;
   const sel = (rows, name, selected, extra = '') => `<select name="${name}" id="${name}" ${extra}><option value="">Choose…</option>${rows.map(r => `<option value="${r.id}"${r.id === selected ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`;
@@ -41,19 +41,20 @@ function mount(app) {
   app.get('/editor', async (req, res, next) => {
     try {
       const ed = req.edition;
-      const [readers, pend, notes, cov, enr, chainPend] = await Promise.all([
+      const [readers, pend, notes, cov, enr, chainPend, songs] = await Promise.all([
         q('select count(*)::int n from reader where edition_id=$1 and active', [ed.id]),
         q(`select count(*)::int n from contribution where edition_id=$1 and state='pending' and consent`, [ed.id]),
         q(`select count(*)::int n from personal_item where edition_id=$1 and status='pending'`, [ed.id]),
         coverage(ed),
         q('select count(*)::int n from enrolment where edition_id=$1 and withdrawn_at is null', [ed.id]),
         q(`select count(*)::int n from chain_link where edition_id=$1 and state='pending'`, [ed.id]),
+        q('select count(*)::int n from song_request where edition_id=$1', [ed.id]),
       ]);
       desk(res, 'Editor’s desk', `<h1>Editor’s desk</h1>
         <ul class="stats">
           <li><a href="/editor/readers"><strong>${readers.rows[0].n}</strong> readers</a></li>
           <li><a href="/editor/contributions"><strong>${pend.rows[0].n}</strong> contributions to review</a></li>
-          <li><a href="/editor/letters#notes"><strong>${notes.rows[0].n}</strong> private notes to check</a></li>
+          <li><a href="/editor/songs"><strong>${songs.rows[0].n}</strong> song requests${req.edition.playlist_url ? ' · playlist link set' : ' · playlist link needed by door 24'}</a></li>
           <li><a href="/editor/chain"><strong>${chainPend.rows[0].n}</strong> paper chain links to check before door 23</a></li>
           <li><a href="/editor/letters#coverage"><strong>${cov.length}</strong> readers still need a letter</a></li>
           <li><a href="/editor/pouch"><strong>${enr.rows[0].n}</strong> in the Pouch${ed.drawn_at ? ' · drawn' : ''}</a></li>
@@ -199,6 +200,7 @@ function mount(app) {
           ${day > 1 ? `<a href="/editor/preview?day=${day - 1}&zone=${encodeURIComponent(T.zoneLabel(zone))}">← ${day - 1}</a>` : ''} ${day < 24 ? `<a href="/editor/preview?day=${day + 1}&zone=${encodeURIComponent(T.zoneLabel(zone))}">${day + 1} →</a>` : ''} · <a href="/editor/doors/${day}">Edit</a></p>
         <article class="story"><p class="kicker">Front page · door ${day}</p><h1>${esc(d.shared_title)}</h1>${paras(d.shared_body)}</article>
         ${await require('./casefile').enquirySection(req.edition.id, day)}
+        ${day === 24 ? require('./nudges').playlistSection(req.edition) : ''}
         ${d.optional_prompt ? `<aside class="prompt"><p>${esc(d.optional_prompt)}</p></aside>` : '<p class="small">Reading only today.</p>'}
         <article class="story private"><p class="kicker">Pigeonhole · door ${day}</p><h1>${esc(d.private_title)}</h1>${paras(d.private_body)}</article>`,
       { banner: 'Editor preview · this is not what readers can see yet' });
@@ -217,10 +219,9 @@ function mount(app) {
           where i.edition_id=$1 and i.status='approved' and i.kind='letter' order by r.name, i.day`, [ed.id])).rows;
       desk(res, 'Letters', `<h1>Letters</h1>
         <section id="coverage"><h2>Still need a letter (${cov.length})</h2>${cov.length ? `<p>${cov.map(c => esc(c.name)).join(', ')}</p>` : '<p>Everyone has post. Lovely.</p>'}</section>
-        <section id="notes"><h2>Private notes waiting for a check (${pending.length})</h2>
-        <p class="small">Thank-yous from door 14, and gold stars with a personal note. They go to the recipient only after you approve them.</p>
+        ${pending.length ? `<section id="notes"><h2>Waiting for a check (${pending.length})</h2>`: ''}
         ${pending.map(i => `<div class="card"><p class="small">To <strong>${esc(i.rname)}</strong> from ${esc(i.aname || 'someone')} · ${i.kind === 'star' ? 'gold star' : `signed “${esc(i.byline)}”`} · door ${i.day}</p>${paras(i.body)}
-          <form method="post" action="/editor/letters/${i.id}/review" class="inline">${hidden(req.csrf)}<button class="btn small primary" name="act" value="approve">Deliver</button> <button class="btn small" name="act" value="decline">Hold back</button></form></div>`).join('')}</section>
+          <form method="post" action="/editor/letters/${i.id}/review" class="inline">${hidden(req.csrf)}<button class="btn small primary" name="act" value="approve">Deliver</button> <button class="btn small" name="act" value="decline">Hold back</button></form></div>`).join('')}${pending.length ? '</section>' : ''}
         <section><h2>Add a letter</h2>
         <form method="post" action="/editor/letters">${hidden(req.csrf)}
           <label for="recipient">For</label>${sel(rs, 'recipient', null, 'required')}
@@ -350,6 +351,33 @@ function mount(app) {
       const st = req.body.act === 'approve' ? 'approved' : 'hidden';
       await q('update chain_link set state=$3 where id=$1 and edition_id=$2', [Number(req.params.id) || 0, req.edition.id, st]);
       res.redirect(303, '/editor/chain');
+    } catch (e) { next(e); }
+  });
+
+  // ---------- Songs ----------
+  app.get('/editor/songs', async (req, res, next) => {
+    try {
+      const rows = (await q('select title, artist, zone from song_request where edition_id=$1 order by lower(title)', [req.edition.id])).rows;
+      const plain = rows.map(r => `${r.title}${r.artist ? ` — ${r.artist}` : ''}`).join('\n');
+      desk(res, 'Songs', `<h1>Christmas request box</h1>
+        <p>${rows.length} request${rows.length === 1 ? '' : 's'} so far. The box is open from door 14 to door 22. Names aren’t shown here, just the songs and desks.</p>
+        ${rows.length ? `<label for="plain">All requests as plain text, ready to copy into your music app</label><textarea id="plain" rows="${Math.min(14, rows.length + 1)}" readonly>${esc(plain)}</textarea>
+        <table class="tbl"><thead><tr><th>Song</th><th>Artist</th><th>Desk</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.title)}</td><td>${esc(r.artist || '')}</td><td>${esc(T.zoneLabel(r.zone))}</td></tr>`).join('')}</tbody></table>` : ''}
+        <h2>The playlist link</h2>
+        <form method="post" action="/editor/songs/playlist">${hidden(req.csrf)}
+          <label for="pl">Playlist link (https). It appears on door 24 for everyone.</label>
+          <input id="pl" name="url" type="url" value="${esc(req.edition.playlist_url || '')}" placeholder="https://">
+          <button class="btn primary">Save link</button></form>
+        <p><a href="/editor/preview?day=24">Preview door 24</a></p>`);
+    } catch (e) { next(e); }
+  });
+  app.post('/editor/songs/playlist', async (req, res, next) => {
+    try {
+      const raw = String(req.body.url || '').trim();
+      const url = raw ? safeHttpsUrl(raw) : null;
+      if (raw && !url) return res.status(400).send('The playlist link needs to start with https://');
+      await q('update edition set playlist_url=$2 where id=$1', [req.edition.id, url]);
+      res.redirect(303, '/editor/songs');
     } catch (e) { next(e); }
   });
 
