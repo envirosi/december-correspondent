@@ -84,7 +84,7 @@ ${nav}
 ${garland('top')}
 <main id="main" tabindex="-1">${body}</main>
 <footer class="foot">${garland()}<p class="small">Holly for the UK desk, a parol star for Cebu, frangipani for Sydney.</p>
-<p>Printed with love and very little budget. The paper closes on 31 January and everything in it is deleted.${reader ? ' <a href="/how">How the paper works</a>' : ''}</p>
+<p>Printed with love and very little budget. The paper closes on 31 January and everything in it is deleted.${reader ? ' <a href="/how">How the paper works</a> · <a href="/settings">Email settings</a>' : ''}</p>
 ${reader ? `<form method="post" action="/signout" class="inline">${hidden(csrf)}<button class="linkish">Sign out on this device</button></form>` : ''}</footer>
 </body></html>`;
 }

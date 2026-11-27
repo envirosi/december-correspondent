@@ -18,7 +18,7 @@ function mount(app) {
   });
   const desk = (res, title, body) => res.page(title, `<div class="desk-wrap"><nav class="subnav" aria-label="Editor’s desk">
       <a href="/editor">Overview</a><a href="/editor/readers">Readers &amp; invites</a><a href="/editor/doors">Doors</a>
-      <a href="/editor/letters">Letters</a><a href="/editor/contributions">Contributions</a><a href="/editor/chain">Paper chain</a><a href="/editor/songs">Songs</a><a href="/editor/pouch">Pouch</a></nav>${body}</div>`,
+      <a href="/editor/letters">Letters</a><a href="/editor/contributions">Contributions</a><a href="/editor/chain">Paper chain</a><a href="/editor/songs">Songs</a><a href="/editor/email">Email</a><a href="/editor/pouch">Pouch</a></nav>${body}</div>`,
     { banner: 'Editor’s desk · readers never see this page' });
   const readersOf = async ed => (await q('select * from reader where edition_id=$1 order by name', [ed.id])).rows;
   const sel = (rows, name, selected, extra = '') => `<select name="${name}" id="${name}" ${extra}><option value="">Choose…</option>${rows.map(r => `<option value="${r.id}"${r.id === selected ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`;
@@ -378,6 +378,35 @@ function mount(app) {
       if (raw && !url) return res.status(400).send('The playlist link needs to start with https://');
       await q('update edition set playlist_url=$2 where id=$1', [req.edition.id, url]);
       res.redirect(303, '/editor/songs');
+    } catch (e) { next(e); }
+  });
+
+  // ---------- Email ----------
+  app.get('/editor/email', async (req, res, next) => {
+    try {
+      const EMAIL = require('./email');
+      const stats = (await q(`select kind, count(*) filter (where ok)::int ok, count(*) filter (where not ok)::int failed from email_log where edition_id=$1 group by kind`, [req.edition.id])).rows;
+      const opt = (await q(`select count(*) filter (where not notify_post)::int nopost, count(*) filter (where not notify_weekly)::int noweekly, count(*)::int n from reader where edition_id=$1 and active`, [req.edition.id])).rows[0];
+      const s = k => stats.find(x => x.kind === k) || { ok: 0, failed: 0 };
+      desk(res, 'Email', `<h1>Email</h1>
+        ${EMAIL.configured() ? `<p class="flash">Sending is on, via ${esc(EMAIL.provider())}.</p>` : '<p class="flash err">Test mode: emails are prepared on schedule but not sent. Sending switches on once the email service details are added in Railway.</p>'}
+        <ul class="stats">
+          <li><span><strong>${s('post').ok}</strong> “something has arrived” emails sent${s('post').failed ? ` · ${s('post').failed} failed` : ''}</span></li>
+          <li><span><strong>${s('weekly').ok}</strong> Monday reminders sent${s('weekly').failed ? ` · ${s('weekly').failed} failed` : ''}</span></li>
+          <li><span><strong>${opt.nopost}</strong> of ${opt.n} readers have turned off post alerts; <strong>${opt.noweekly}</strong> have turned off Monday reminders</span></li>
+        </ul>
+        <p class="small">Post alerts go out at most once a day per person, between 08:00 and 20:00 their time, only once the item is visible to them, and never say what it is or who sent it. Monday reminders go at 07:30 their time on 7, 14 and 21 December.</p>
+        <form method="post" action="/editor/email/test">${hidden(req.csrf)}<button class="btn">Send a test email to ${esc(req.reader.email)}</button></form>
+        ${req.query.test ? `<p class="flash" role="status">${req.query.test === 'ok' ? (EMAIL.configured() ? 'Test email sent. Check your inbox (and junk folder).' : 'Test mode: the email was prepared but not sent.') : 'The test email failed. Check the email settings in Railway.'}</p>` : ''}`);
+    } catch (e) { next(e); }
+  });
+  app.post('/editor/email/test', async (req, res, next) => {
+    try {
+      const EMAIL = require('./email');
+      const unsubUrl = EMAIL.site(`/email/stop/${req.reader.email_token}`);
+      const { html, text } = EMAIL.wrap({ heading: 'Testing, testing', lines: ['If you can read this, The December Correspondent can reach your inbox.', 'The editor would like it noted that this is the first thing in the enquiry to work first time.'], button: 'Open the paper', buttonUrl: EMAIL.site('/'), unsubUrl });
+      const ok = await EMAIL.send({ to: req.reader.email, subject: 'Test from The December Correspondent', text, html, unsubUrl });
+      res.redirect(303, `/editor/email?test=${ok ? 'ok' : 'fail'}`);
     } catch (e) { next(e); }
   });
 

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+types.setTypeParser(1082, v => v); // keep DATE columns as 'YYYY-MM-DD' strings
 
 const url = process.env.DATABASE_URL || 'postgres://postgres@localhost:5432/dc?host=/tmp';
 const ssl = /sslmode=require/.test(url) || process.env.PGSSL === '1' ? { rejectUnauthorized: false } : undefined;

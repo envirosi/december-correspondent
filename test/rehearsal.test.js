@@ -8,6 +8,7 @@ execSync(`psql -h /tmp -U postgres -qc "drop database if exists ${DB}" -c "creat
 process.env.DATABASE_URL = `postgres://postgres@localhost:5432/${DB}?host=/tmp`;
 process.env.ALLOW_CLOCK_OVERRIDE = '1';
 process.env.PUBLIC_ORIGIN = 'http://localhost';
+process.env.EMAIL_PROVIDER = 'memory';
 
 const { pool, q, migrate } = require('../src/db');
 const { seed, upsertReader } = require('../src/seed');
@@ -350,4 +351,64 @@ test('nudges: polls, crackers, gold stars, hats, offline, paper chain', async ()
 test('personal pages are never cached', async () => {
   const r = await req('/pigeonhole', { who: P.ada });
   assert.match(r.headers.get('cache-control'), /no-store/);
+});
+
+test('email: daily digest, quiet hours, no spoilers, opt-out, Monday reminder', async () => {
+  const EMAIL = require('../src/email');
+  await q('update personal_item set notified_at=now()'); await q('update parcel set notified_at=now()');
+  await q('update reader set notify_post=false, notify_weekly=false');
+  const gus = await upsertReader(ed, { name: 'Gus Holly', email: 'gus@t.test', zone: 'Europe/London' });
+  const hana = await upsertReader(ed, { name: 'Hana Parol', email: 'hana@t.test', zone: 'Asia/Manila' });
+  const mail = to => EMAIL.outbox.filter(m => m.to === to);
+  const give = (who, day, kind, body) => q(`insert into personal_item(edition_id, recipient_id, day, body, byline, kind, author_id) values ($1,$2,$3,$4,'x',$5,$6)`, [ed.id, who.id, day, body, kind, gus.id]);
+
+  await give(hana, 4, 'cracker', 'Gus Holly pulled a cracker with you. You won a whistle.\n\nQ?\nSECRET PUNCHLINE');
+  await EMAIL.runDigest(new Date('2026-12-04T02:00:00Z'));               // 10:00 in Cebu
+  assert.equal(mail('hana@t.test').length, 1);
+  const m = mail('hana@t.test')[0];
+  assert.match(m.subject, /arrived in your pigeonhole/);
+  assert.match(m.text, /1 cracker waiting/);
+  assert.doesNotMatch(m.text + m.html, /SECRET PUNCHLINE|Gus|whistle/);
+  assert.match(m.headers['List-Unsubscribe'], /\/email\/stop\//);
+
+  await give(hana, 4, 'star', 'A gold star: Made me laugh.');
+  await EMAIL.runDigest(new Date('2026-12-04T05:00:00Z'));
+  assert.equal(mail('hana@t.test').length, 1, 'at most one a day');
+  await EMAIL.runDigest(new Date('2026-12-04T15:00:00Z'));               // 23:00 in Cebu: quiet hours
+  assert.equal(mail('hana@t.test').length, 1);
+  await EMAIL.runDigest(new Date('2026-12-05T01:00:00Z'));               // 09:00 next day
+  assert.equal(mail('hana@t.test').length, 2);
+  assert.match(mail('hana@t.test')[1].text, /1 gold star waiting/);
+
+  await give(gus, 10, 'letter', 'A letter for later');
+  await EMAIL.runDigest(new Date('2026-12-05T12:00:00Z'));
+  assert.equal(mail('gus@t.test').length, 0, 'no email before the letter is visible');
+  await EMAIL.runDigest(new Date('2026-12-10T09:00:00Z'));
+  assert.equal(mail('gus@t.test').length, 1);
+  assert.match(mail('gus@t.test')[0].text, /1 letter waiting/);
+
+  // Monday reminder: 07:30 local, once.
+  await EMAIL.runWeekly(new Date('2026-12-07T07:20:00Z'));
+  assert.equal(mail('gus@t.test').length, 1, 'not before 07:30');
+  await EMAIL.runWeekly(new Date('2026-12-07T07:31:00Z'));
+  await EMAIL.runWeekly(new Date('2026-12-07T09:00:00Z'));
+  const weekly = mail('gus@t.test').filter(x => /This week/.test(x.subject));
+  assert.equal(weekly.length, 1);
+  assert.match(weekly[0].text, /Today’s front page[\s\S]*Communal Tin, day 7/);
+  assert.doesNotMatch(weekly[0].text, /haven’t opened|unread/i);
+  await EMAIL.runWeekly(new Date('2026-12-08T07:31:00Z'));
+  assert.equal(mail('gus@t.test').filter(x => /This week/.test(x.subject)).length, 1, 'Tuesday: nothing');
+
+  // One-click unsubscribe from a mail app, then nothing more.
+  assert.equal(mail('hana@t.test').filter(x => /This week/.test(x.subject)).length, 1, 'Cebu Monday reminder too');
+  const before = mail('hana@t.test').length;
+  const tok = (await q('select email_token from reader where id=$1', [hana.id])).rows[0].email_token;
+  assert.equal((await req(`/email/stop/${tok}`)).status, 200);
+  const r = await fetch(`${base}/email/stop/${tok}`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'List-Unsubscribe=One-Click' });
+  assert.equal(r.status, 200);
+  await give(hana, 11, 'star', 'Another star');
+  await EMAIL.runDigest(new Date('2026-12-11T02:00:00Z'));
+  await EMAIL.runWeekly(new Date('2026-12-14T00:00:00Z'));
+  assert.equal(mail('hana@t.test').length, before, 'nothing after unsubscribing');
+  assert.equal((await req('/email/stop/not-a-real-token')).status, 404);
 });

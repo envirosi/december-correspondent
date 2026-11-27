@@ -7,6 +7,7 @@ const A = require('./auth');
 const { esc, paras, hidden, layout, doorGrid, mediaLink, safeHttpsUrl } = V;
 const CASE = require('./casefile');
 const NUDGE = require('./nudges');
+const EMAIL = require('./email');
 
 const RELAY_DAYS = new Set([3, 17, 21]);
 const PREVIEW_COOKIE = 'dc_preview';
@@ -74,7 +75,7 @@ function createApp() {
 
   // POST protection.
   app.use((req, res, next) => {
-    if (req.method !== 'POST' || req.path === '/welcome') return next();
+    if (req.method !== 'POST' || req.path === '/welcome' || req.path.startsWith('/email/stop/')) return next();
     if (!A.csrfOk(req)) return res.status(403).page('Expired form', '<article class="story"><h1>That form had gone stale</h1><p>Please go back, refresh the page and try again.</p></article>');
     next();
   });
@@ -117,6 +118,8 @@ function createApp() {
       res.redirect(303, '/');
     } catch (e) { next(e); }
   });
+
+  EMAIL.mountPublic(app);
 
   // Logged-out front.
   app.use((req, res, next) => {
@@ -190,6 +193,7 @@ function createApp() {
         ${item('The Diplomatic Pouch', `An optional Secret Santa with a budget of exactly zero: a few kind words and a link to something free, like a song or a GIF. ${pouchOpen ? `Join by ${esc(T.fmtFull(ed.enrol_close, zone))}, your time.` : 'Gifts arrive in pigeonholes on 18 December.'}`)}
         ${item('Post for you', 'Now and then your pigeonhole will have something in it: a letter, a cracker someone pulled with you, or a gold star. You can send crackers and stars too, on the days they appear.')}
         ${item('The Christmas request box', 'On door 14, tell us your favourite Christmas song. On door 24 everyone gets a playlist made from every request.')}
+        ${item('A nudge by email, now and then', 'If something lands in your pigeonhole, you’ll get one short email that day (never saying what it is), plus a Monday reminder. Change or stop these any time from Email settings at the bottom of every page.')}
         ${item('No catching up required', 'Miss a week? Every door you’ve opened stays open. The paper closes on 31 January, and then everything in it, letters included, is deleted.')}
       </ol>
       <p class="actions"><a class="btn primary" href="/">${first ? 'Open the paper' : 'Back to the front page'}</a></p>
@@ -343,6 +347,7 @@ function createApp() {
 
   require('./pouch').mount(app);
   NUDGE.mount(app);
+  EMAIL.mountReader(app);
   CASE.mount(app);
   require('./editor').mount(app);
 

@@ -54,10 +54,10 @@ async function seedCase(edition) {
 }
 
 async function upsertReader(edition, { name, email, zone, role = 'reader' }) {
-  const r = await q(`insert into reader(edition_id, public_id, name, email, zone, role)
-      values ($1,$2,$3,lower($4),$5,$6)
+  const r = await q(`insert into reader(edition_id, public_id, name, email, zone, role, email_token)
+      values ($1,$2,$3,lower($4),$5,$6,$7)
       on conflict (edition_id, email) do update set name=excluded.name, zone=excluded.zone, role=excluded.role, active=true
-      returning *`, [edition.id, crypto.randomBytes(9).toString('base64url'), name, email, zone, role]);
+      returning *`, [edition.id, crypto.randomBytes(9).toString('base64url'), name, email, zone, role, crypto.randomBytes(24).toString('base64url')]);
   return r.rows[0];
 }
 
@@ -65,6 +65,10 @@ async function seed({ overwrite = false } = {}) {
   const edition = await ensureEdition();
   const doors = await seedDoors(edition, { overwrite });
   const caseFile = await seedCase(edition);
+  // Every reader needs an unguessable token for their unsubscribe link.
+  for (const r of (await q('select id from reader where email_token is null')).rows) {
+    await q('update reader set email_token=$2 where id=$1', [r.id, crypto.randomBytes(24).toString('base64url')]);
+  }
   const nudges = await require('./nudges').seedNudges(edition);
   if (process.env.EDITOR_EMAIL) {
     const zone = T.zoneFrom(process.env.EDITOR_ZONE || 'UK');

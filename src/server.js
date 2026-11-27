@@ -14,4 +14,5 @@ const T = require('./time');
   if (T.clockOverrideAllowed()) console.log('REHEARSAL MODE: clock override enabled');
   const port = Number(process.env.PORT) || 3000;
   createApp().listen(port, () => console.log(`December Correspondent on :${port}`));
+  require('./email').startScheduler();
 })().catch(e => { console.error(e); process.exit(1); });
